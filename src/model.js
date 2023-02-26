@@ -1,5 +1,6 @@
 const sqlite = require('sqlite3').verbose();
 const path = require('path');
+const { v4: uuid } = require('uuid');
 
 // connect
 const db = new sqlite.Database(
@@ -26,24 +27,23 @@ const queries = {
   dropEvents: `drop table if exists events;`,
   dropActivities: `drop table if exists activities;`,
   createActivitiesTable: `create table activities(
-                            activitID varchar(50) primary key,
-                            title varchar(50) not null,
+                            title varchar(50) primary key,
                             background varchar(50),
                             icon varchar(50),
-                            createDate datetime default current_timestamp
+                            date datetime default current_timestamp
                           );`,
   createEventsTable: `create table events(
-                      activitID string,
-                      date datetime,
+                      id string unique,
+                      activit string,
+                      date datetime default current_timestamp,
                       duration int,
-                      unique(activitID, date),
-                      foreign key(activitID) references activities(activitID)
+                      foreign key(activit) references activities(title) on delete cascade
                     );`,
-  insertDefaultActivities: `insert into activities (activitID, title, background, icon)
-                            values ('8c198bc6-50b5-43df-bc7c-8210055fc573', 'reading', '', ''),
-                            ('67a8890f-08aa-4005-b750-7ec0d7daca70', 'projects', '', ''),
-                            ('e044226d-7b6b-4244-ae3a-361de5b15ddc', 'dev misc', '', ''),
-                            ('453b302c-88a3-474b-a374-c0be9fbdfe32', 'new tech', '', '')
+  insertDefaultActivities: `insert into activities (title, background, icon)
+                            values ('reading', '', ''),
+                            ('projects', '', ''),
+                            ('dev misc', '', ''),
+                            ('new tech', '', '')
                            ;`,
 };
 
@@ -54,7 +54,11 @@ const init = async (socket) => {
     if (resp.err) {
       console.log(resp);
       socket.write(
-        JSON.stringify({ type: 'err', query: list[i][0], data: 'db err' })
+        JSON.stringify({
+          type: 'err',
+          query: list[i][0],
+          data: 'db err - initializing db',
+        })
       );
     }
   }
@@ -67,20 +71,26 @@ const listActivities = async (socket) => {
   if (resp.err) {
     console.log(resp);
     socket.write(
-      JSON.stringify({ type: 'err', query: list[i][0], data: 'db err' })
+      JSON.stringify({ type: 'err', data: 'db err - listig activities' })
     );
   }
+
   socket.write(JSON.stringify({ type: 'data', data: resp.data }));
 };
 
-const previewActivity = async (socket, activity = '', property = '*') => {
-  let query = `select ${property} from activities where title=?`;
-  const params = [activity];
+const previewActivity = async (socket, props) => {
+  let query = `select ${
+    props?.selectProperty ?? '*'
+  } from activities where title=?`;
+  // console.log(props)
+  const params = [props.filterProperty];
 
   const resp = await dbHandler(query, params);
   if (resp.err) {
     console.log(resp);
-    socket.write(JSON.stringify({ type: 'err', data: 'db err' }));
+    socket.write(
+      JSON.stringify({ type: 'err', data: 'db err - previewing activity' })
+    );
   }
 
   let respData = resp.data;
@@ -90,11 +100,204 @@ const previewActivity = async (socket, activity = '', property = '*') => {
     respData = respData[0];
   }
 
-  if (property != '*') {
-    respData = respData[property];
-  }
+  // console.log(respData);
+  respData = props?.selectProperty ? Object.values(respData)[0] : respData;
 
   socket.write(JSON.stringify({ type: 'data', data: respData }));
 };
 
-module.exports = { dbHandler, init, la: listActivities, l: previewActivity };
+const activityExists = async (activityTitle) => {
+  let query = `select * from activities where title=?`;
+  const params = [activityTitle];
+
+  const resp = await dbHandler(query, params);
+  if (resp.err) {
+    console.log(resp);
+    socket.write(
+      JSON.stringify({
+        type: 'err',
+        data: 'db err - checking if activity exists',
+      })
+    );
+  }
+
+  return resp.data.length;
+};
+
+const eventExists = async (eventID) => {
+  let query = `select * from events where id=?`;
+  const params = [eventID];
+
+  const resp = await dbHandler(query, params);
+  if (resp.err) {
+    console.log(resp);
+    socket.write(
+      JSON.stringify({
+        type: 'err',
+        data: 'db err - checking if activity exists',
+      })
+    );
+  }
+
+  return resp.data.length;
+};
+
+const createActivity = async (socket, props) => {
+  const existResp = await activityExists(props.title);
+  if (existResp) {
+    return socket.write(
+      JSON.stringify({
+        type: 'err',
+        data: `db err - activity ${props.title} already exists`,
+      })
+    );
+  }
+
+  // console.log(props)
+  let query = `insert into
+                activities(activitID, title, background, icon)
+                values(?, ?, ?, ?);
+              `;
+  const params = [uuid(), props.title, props.background, props.icon];
+
+  const resp = await dbHandler(query, params);
+  if (resp.err) {
+    // console.log(resp);
+    socket.write(
+      JSON.stringify({ type: 'err', data: 'db err - creating activity' })
+    );
+  }
+
+  socket.write(
+    JSON.stringify({
+      type: 'data',
+      data: `new activity was created:\n${JSON.stringify(props, undefined, 2)}`,
+    })
+  );
+};
+
+const removeActivity = async (socket, title) => {
+  const existResp = await activityExists(title);
+  if (!existResp) {
+    return socket.write(
+      JSON.stringify({
+        type: 'err',
+        data: `db err - activity ${title} doesn't exists`,
+      })
+    );
+  }
+
+  let query = `delete from activities where title=?`;
+  const params = [title];
+  const resp = await dbHandler(query, params);
+
+  if (resp.err) {
+    console.log(resp);
+    socket.write(
+      JSON.stringify({ type: 'err', data: 'db err - deleting activity' })
+    );
+  }
+  console.log(resp);
+
+  socket.write(
+    JSON.stringify({
+      type: 'data',
+      data: `activity ${title} successfully deleted`,
+    })
+  );
+};
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+sleep(33);
+
+const updateActivity = async (socket, props) => {
+  const existResp = await activityExists(props.title);
+  if (!existResp) {
+    return socket.write(
+      JSON.stringify({
+        type: 'err',
+        data: `db err - activity ${props.title} doesn't exists`,
+      })
+    );
+  }
+
+  let query = `update from activities where title=? set`;
+  const params = [props.title];
+  const resp = await dbHandler(query, params);
+
+  if (resp.err) {
+    console.log(resp);
+    socket.write(
+      JSON.stringify({ type: 'err', data: 'db err - deleting activity' })
+    );
+  }
+  console.log(resp);
+
+  socket.write(
+    JSON.stringify({
+      type: 'data',
+      data: `activity ${props.title} successfully deleted`,
+    })
+  );
+};
+
+const incrementDuration = async (activity, eventID, duration) => {
+  // TODO: communicate with the parent
+  const existActivityResp = await activityExists(activity);
+  if (!existActivityResp) {
+    // socket.write(
+    //   JSON.stringify({
+    //     type: 'err',
+    //     data: `db err - activity ${activity} doesn't exists`,
+    //   })
+    // );
+    return;
+  }
+
+  const existEventResp = await eventExists(eventID);
+  if (!existEventResp) {
+    // create new event
+    let query = `insert into events(id, activit, duration)
+                values(?, ?, ?)`;
+    const params = [eventID, activity, duration];
+    const resp = await dbHandler(query, params);
+
+    if (resp.err) {
+      // console.log(resp);
+      // socket.write(
+      //   JSON.stringify({ type: 'err', data: 'db err - creating new event' })
+      // );
+    }
+
+    return;
+  }
+
+  let query = `update events set duration=? where id=?;`;
+  const params = [duration, eventID];
+  const resp = await dbHandler(query, params);
+
+  // if (resp.err) {
+  //   console.log(resp);
+  //   socket.write(
+  //     JSON.stringify({ type: 'err', data: 'db err - incrementing event duration' })
+  //   );
+  // }
+  // // console.log(resp);
+  //
+  // socket.write(
+  //   JSON.stringify({
+  //     type: 'data',
+  //     data: `activity ${activity} successfully deleted`,
+  //   })
+  // );
+};
+
+module.exports = {
+  dbHandler,
+  init,
+  la: listActivities,
+  l: previewActivity,
+  c: createActivity,
+  r: removeActivity,
+  incrementDuration,
+};
