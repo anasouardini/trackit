@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // const {execSync} = require('child_process');
 // execSync('sleep 1');
 
@@ -12,11 +14,15 @@ client.on('data', (data) => {
 
   if (msg.type == 'err') {
     console.log('err:', msg.data);
-  } else if (msg.type == 'data'){
+  } else if (msg.type == 'data') {
     console.log(msg.data);
   }
 
   process.exit(0);
 });
-
-client.write(JSON.stringify({ type: 'cmd', action: process.argv[2], arg2: process.argv?.[3], arg3: process.argv?.[4] }));
+const data = {
+  type: 'cmd',
+  action: process.argv[2],
+  args: process.argv.slice(3),
+};
+client.write(JSON.stringify(data));
