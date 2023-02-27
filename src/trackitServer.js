@@ -14,7 +14,7 @@
 // [X] stop activity
 // [ ] get activity preview(props, stats)
 // [ ] get activity summary(duration, datily, weekly..., )
-// [ ] get widget output
+// [X] get widget output
 // [ ] gracefull shutdown
 
 // (async()=>{((ms)=>new Promise((r)=>setTimeout(r, ms)))(3000);})()
