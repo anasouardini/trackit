@@ -12,11 +12,11 @@ client.connect(8989);
 client.on('data', (data) => {
   const msg = JSON.parse(data);
 
-  if (msg.type == 'err') {
-    console.log('err:', msg.data);
-  } else if (msg.type == 'data') {
-    console.log(msg.data);
+  if (msg.err) {
+    return console.log('err:', msg.data);
   }
+
+  console.log(msg.data);
 
   process.exit(0);
 });
