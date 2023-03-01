@@ -1,10 +1,6 @@
 #!/usr/bin/env node
-//
-// BACKGROUND PROCESSES
-// update activity duration, each 1min
-// timer/counter
 
-// REQUESTS
+// TODO:
 // [X] list activities
 // [X] list events of an activity
 // [X] list specific activitie details(title, bg, icon, createDate)
@@ -16,11 +12,9 @@
 // [ ] get activity summary(duration, datily, weekly..., )
 // [X] get widget output
 // [ ] gracefull shutdown
+// [ ] activities should have IDs
 
 // (async()=>{((ms)=>new Promise((r)=>setTimeout(r, ms)))(3000);})()
-// console.log('sdfklj')
-
-// const {Worker} = require('worker_threads');
 
 // =================================================  Tools
 const crypto = require('crypto');
