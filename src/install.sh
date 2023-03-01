@@ -2,7 +2,7 @@
 
 binPath=/usr/bin
 
-sudo cp trackitClient.js $binPath/trackitClient
+sudo cp trackitClient.js $binPath/trackit
 sudo chmod +x $binPath/trackitClient
 
 sudo cp trackitServer.js $binPath/trackitServer
