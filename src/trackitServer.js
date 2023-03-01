@@ -6,13 +6,13 @@
 
 // REQUESTS
 // [X] list activities
+// [X] list events of an activity
 // [X] list specific activitie details(title, bg, icon, createDate)
 // [X] create activity
 // [X] remove activity
 // [ ] update activity
 // [X] start activity
 // [X] stop activity
-// [ ] get activity preview(props, stats)
 // [ ] get activity summary(duration, datily, weekly..., )
 // [X] get widget output
 // [ ] gracefull shutdown
@@ -105,11 +105,12 @@ const Model = (() => {
                             date datetime default current_timestamp
                           );`,
     createEventsTable: `create table events(
-                      id string unique,
-                      activity string,
+                      id string,
+                      activity string ,
                       date datetime default current_timestamp,
                       duration int,
-                      foreign key(activit) references activities(title) on delete cascade
+                      unique(activity, date),
+                      foreign key(activity) references activities(title) on delete cascade
                     );`,
     insertDefaultActivities: `insert into activities (title, background, icon)
                             values ('reading', '', ''),
@@ -127,7 +128,7 @@ const Model = (() => {
         console.log(resp);
         socket.write(
           JSON.stringify({
-            type: 'err',
+            err: true,
             query: list[i][0],
             data: 'db err - initializing db',
           })
@@ -135,22 +136,33 @@ const Model = (() => {
       }
     }
 
-    socket.write(JSON.stringify({ type: '' }));
+    socket.write(JSON.stringify({ type: '', data: 'database re/initialized' }));
   };
 
-  const listActivities = async (socket) => {
-    const resp = await dbHandler('select * from activities;', []);
-    if (resp.err) {
-      console.log(resp);
-      socket.write(
-        JSON.stringify({ type: 'err', data: 'db err - listig activities' })
-      );
+  const getActivities = async (socket, props) => {
+    if (!props.filterProperty || props.selectProperty) {
+      const resp = await dbHandler('select * from activities;', []);
+      if (resp.err) {
+        console.log(resp);
+        socket.write(
+          JSON.stringify({
+            err: true,
+            data: 'db err - listig activities',
+          })
+        );
+      }
+
+      const onelineEntries = resp.data.map((itemObj) => {
+        let onelineItem = [];
+        Object.values(itemObj).forEach((val) => {
+          onelineItem.push(val);
+        });
+        return onelineItem.join('|');
+      });
+
+      return socket.write(JSON.stringify({ err: false, data: onelineEntries }));
     }
 
-    socket.write(JSON.stringify({ type: 'data', data: resp.data }));
-  };
-
-  const previewActivity = async (socket, props) => {
     let query = `select ${
       props?.selectProperty ?? '*'
     } from activities where title=?`;
@@ -161,7 +173,10 @@ const Model = (() => {
     if (resp.err) {
       console.log(resp);
       socket.write(
-        JSON.stringify({ type: 'err', data: 'db err - previewing activity' })
+        JSON.stringify({
+          err: true,
+          data: 'db err - previewing activity',
+        })
       );
     }
 
@@ -175,7 +190,74 @@ const Model = (() => {
     // console.log(respData);
     respData = props?.selectProperty ? Object.values(respData)[0] : respData;
 
-    socket.write(JSON.stringify({ type: 'data', data: respData }));
+    let onelineItem = [];
+    Object.values(respData).forEach((val) => {
+      onelineItem.push(val);
+    });
+    socket.write(JSON.stringify({ err: false, data: onelineItem.join('|') }));
+  };
+
+  const getEvents = async (socket, props) => {
+    if (!props.filterProperty || props.selectProperty) {
+      const resp = await dbHandler('select * from events;', []);
+      if (resp.err) {
+        console.log(resp);
+
+        socket.write(
+          JSON.stringify({
+            err: true,
+            data: 'db err - listing events',
+          })
+        );
+      }
+
+      const onelineEntries = resp.data.map((itemObj) => {
+        let onelineItem = [];
+        Object.values(itemObj).forEach((val) => {
+          onelineItem.push(val);
+        });
+        return onelineItem.join('|');
+      });
+
+      return socket.write(JSON.stringify({ err: false, data: onelineEntries }));
+    }
+
+    let query = `select ${
+      props?.selectProperty ?? '*'
+    } from events where activity=?`;
+    // console.log(props)
+    const params = [props.filterProperty];
+
+    const resp = await dbHandler(query, params);
+    if (resp.err) {
+      console.log(resp);
+      socket.write(
+        JSON.stringify({
+          err: true,
+          data: `db err - previewing event ${props.filterProperty}'`,
+        })
+      );
+    }
+
+    let respData = resp.data;
+    if (respData.length == 0) {
+      respData = 'event not found';
+    } else if (respData.length == 1) {
+      respData = respData[0];
+    }
+
+    // console.log(respData);
+    respData = props?.selectProperty ? Object.values(respData)[0] : respData;
+
+    const onelineEntries = resp.data.map((itemObj) => {
+      let onelineItem = [];
+      Object.values(itemObj).forEach((val) => {
+        onelineItem.push(val);
+      });
+      return onelineItem.join('|');
+    });
+
+    socket.write(JSON.stringify({ err: false, data: onelineEntries }));
   };
 
   const activityExists = async (activityTitle) => {
@@ -187,7 +269,7 @@ const Model = (() => {
       console.log(resp);
       socket.write(
         JSON.stringify({
-          type: 'err',
+          err: true,
           data: 'db err - checking if activity exists',
         })
       );
@@ -205,7 +287,7 @@ const Model = (() => {
       console.log(resp);
       socket.write(
         JSON.stringify({
-          type: 'err',
+          err: true,
           data: 'db err - checking if activity exists',
         })
       );
@@ -219,7 +301,7 @@ const Model = (() => {
     if (existResp) {
       return socket.write(
         JSON.stringify({
-          type: 'err',
+          err: true,
           data: `db err - activity ${props.title} already exists`,
         })
       );
@@ -241,13 +323,16 @@ const Model = (() => {
     if (resp.err) {
       // console.log(resp);
       socket.write(
-        JSON.stringify({ type: 'err', data: 'db err - creating activity' })
+        JSON.stringify({
+          err: true,
+          data: 'db err - creating activity',
+        })
       );
     }
 
     socket.write(
       JSON.stringify({
-        type: 'data',
+        err: false,
         data: `new activity was created:\n${JSON.stringify(
           props,
           undefined,
@@ -262,7 +347,7 @@ const Model = (() => {
     if (!existResp) {
       return socket.write(
         JSON.stringify({
-          type: 'err',
+          err: true,
           data: `db err - activity ${title} doesn't exists`,
         })
       );
@@ -275,14 +360,14 @@ const Model = (() => {
     if (resp.err) {
       console.log(resp);
       socket.write(
-        JSON.stringify({ type: 'err', data: 'db err - deleting activity' })
+        JSON.stringify({ err: true, data: 'db err - deleting activity' })
       );
     }
     console.log(resp);
 
     socket.write(
       JSON.stringify({
-        type: 'data',
+        err: false,
         data: `activity ${title} successfully deleted`,
       })
     );
@@ -293,7 +378,7 @@ const Model = (() => {
     if (!existResp) {
       return socket.write(
         JSON.stringify({
-          type: 'err',
+          err: true,
           data: `db err - activity ${props.title} doesn't exists`,
         })
       );
@@ -306,45 +391,54 @@ const Model = (() => {
     if (resp.err) {
       console.log(resp);
       socket.write(
-        JSON.stringify({ type: 'err', data: 'db err - deleting activity' })
+        JSON.stringify({ err: true, data: 'db err - deleting activity' })
       );
     }
     console.log(resp);
 
     socket.write(
       JSON.stringify({
-        type: 'data',
+        err: false,
         data: `activity ${props.title} successfully deleted`,
       })
     );
   };
 
-  const incrementDuration = async (activity, eventID, duration) => {
+  const incrementDuration = async (_, activity, eventID, duration) => {
     const existActivityResp = await activityExists(activity);
     // TODO: errors need to be signaled to the timer to stop
     if (!existActivityResp) {
-      // socket.write(
-      //   JSON.stringify({
-      //     type: 'err',
-      //     data: `db err - activity ${activity} doesn't exists`,
-      //   })
-      // );
+      console.log({
+        err: true,
+        data: `db err - activity ${activity} doesn't exists`,
+      });
       return;
     }
 
     const existEventResp = await eventExists(eventID);
     if (!existEventResp) {
       // create new event
-      let query = `insert into events(id, activity, duration)
-                values(?, ?, ?)`;
-      const params = [eventID, activity, duration];
+      let query = `insert into events(id, activity, date, duration)
+                values(?, ?, ?, ?)`;
+      // js dates are ughhh
+      const accDate = ((d) => {
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        const date = d.getDate();
+        const h = d.getHours();
+        const m = d.getMinutes();
+        const s = d.getSeconds();
+        return `${year}-${month}-${date} ${h}:${m}:${s}`;
+      })(new Date());
+
+      // console.log(accDate);
+      const params = [eventID, activity, accDate, duration];
       const resp = await dbHandler(query, params);
 
       if (resp.err) {
-        // console.log(resp);
-        // socket.write(
-        //   JSON.stringify({ type: 'err', data: 'db err - creating new event' })
-        // );
+        console.log(
+          JSON.stringify({ err: true, data: 'db err - creating new event' })
+        );
       }
 
       return;
@@ -354,23 +448,16 @@ const Model = (() => {
     const params = [duration, eventID];
     const resp = await dbHandler(query, params);
 
-    // if (resp.err) {
-    //   console.log(resp);
-    //   socket.write(
-    //     JSON.stringify({ type: 'err', data: 'db err - incrementing event duration' })
-    //   );
-    // }
-    // // console.log(resp);
-    //
-    // socket.write(
-    //   JSON.stringify({
-    //     type: 'data',
-    //     data: `activity ${activity} successfully deleted`,
-    //   })
-    // );
+    if (resp.err) {
+      console.log(
+        JSON.stringify({
+          err: true,
+          data: 'db err - incrementing event duration',
+        })
+      );
+    }
+    // console.log(resp);
   };
-
-
 
   const getDayDuration = async (socket, activity) => {
     const existActivityResp = await activityExists(activity);
@@ -380,18 +467,26 @@ const Model = (() => {
 
     let query = `select sum(duration) as duration from events where activity=?
               and date >= ? and date < ?;`;
-    const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1);
-    const params = [
-      activity,
-      today.toISOString().split('T')[0] + ' 00:00:00',
-      tomorrow.toISOString().split('T')[0] + ' 00:00:00',
-    ];
+    const today = ((d) => {
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
+      const date = d.getDate();
+      return `${year}-${month}-${date} 00:00:00`;
+    })(new Date());
+    const tomorrow = ((d) => {
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
+      const date = d.getDate();
+      return `${year}-${month}-${date + 1} 00:00:00`;
+    })(new Date());
+    const params = [activity, today, tomorrow];
+    // console.log(params)
     const resp = await dbHandler(query, params);
     if (!resp.data.length) {
       return { err: false, data: 'no activity' };
     }
+
+    // console.log(resp.data)
     return {
       err: false,
       data: `${activity} : ${tools.secToTime(resp.data[0].duration)}`,
@@ -401,12 +496,13 @@ const Model = (() => {
   return {
     dbHandler,
     init,
-    la: listActivities,
-    l: previewActivity,
+    getActivities,
+    getEvents,
     c: createActivity,
     r: removeActivity,
-    w: getDayDuration,
+    getDayDuration,
     incrementDuration,
+    getDayDuration,
   };
 })();
 
@@ -418,7 +514,7 @@ const timerObj = {
   currentActivity: '',
   running: false,
   intervalID: '',
-  run: () => {
+  run: (socket) => {
     const state = {
       start: Date.now(),
       eventID: tools.rand.uuid(),
@@ -433,7 +529,9 @@ const timerObj = {
     const incrementDuration = () => {
       // interval is passed as seconds
       const duration = Math.floor((Date.now() - state.start) / 1000);
+      // console.log(duration);
       Model.incrementDuration(
+        socket,
         timerObj.currentActivity,
         state.eventID,
         duration
@@ -460,15 +558,25 @@ const actions = {
   init: (socket) => {
     Model.init(socket);
   },
-  la: (socket) => {
-    Model.la(socket);
-  },
-  l: (socket, request) => {
+  la: (socket, request) => {
+    if (request.args[0] == 'all' || request.args[0] == 'a') {
+      Model.getActivities(socket);
+    }
     const args = {
       filterProperty: request.args[0],
       selectProperty: request.args[1],
     };
-    Model.l(socket, args);
+    Model.getActivities(socket, args);
+  },
+  le: (socket, request) => {
+    if (request.args[0] == 'all' || request.args[0] == 'a') {
+      Model.getEvents(socket);
+    }
+    const args = {
+      filterProperty: request.args[0],
+      selectProperty: request.args[1],
+    };
+    Model.getEvents(socket, args);
   },
   c: (socket, request) => {
     const args = {
@@ -482,11 +590,14 @@ const actions = {
     Model.r(socket, request.args[0]);
   },
   w: async (socket, request) => {
-    if (timerObj.currentActivity) {
-      const resp = await Model.w(socket, timerObj.currentActivity);
+    if (timerObj.currentActivity || request?.args[0]) {
+      const resp = await Model.getDayDuration(
+        socket,
+        request?.args[0] ?? timerObj.currentActivity
+      );
       return socket.write(JSON.stringify(resp));
     }
-    socket.write(JSON.stringify({ err: false, data: 'no activity' }));
+    socket.write(JSON.stringify({ err: false, data: 'no activity\nno activity was specified or currently running' }));
   },
   c: async (socket) => {
     // console.log(timerObj.running)
@@ -515,14 +626,14 @@ const actions = {
 
       if (timerObj.currentActivity != currentActivity) {
         timerObj.currentActivity = currentActivity;
-        timerObj.run();
+        timerObj.run(socket);
         message += `\nactivity ${currentActivity} has started`;
       } else {
         timerObj.currentActivity = '';
       }
     } else {
       timerObj.currentActivity = currentActivity;
-      timerObj.run();
+      timerObj.run(socket);
       message += `activity ${currentActivity} has started`;
     }
 
