@@ -13,7 +13,8 @@ client.on('data', (data) => {
   const msg = JSON.parse(data);
 
   if (msg.err) {
-    return console.log('err:', msg.data);
+    // return console.log('err:', msg.data);
+    return console.log('err');
   }
 
   console.log(msg.data);
