@@ -13,6 +13,7 @@
 // [X] get widget output
 // [ ] gracefull shutdown
 // [ ] activities should have IDs
+// [X] notifications
 
 // (async()=>{((ms)=>new Promise((r)=>setTimeout(r, ms)))(3000);})()
 
@@ -400,7 +401,8 @@ const Model = (() => {
 
   const incrementDuration = async (_, activity, eventID, duration) => {
     const existActivityResp = await activityExists(activity);
-    // TODO: errors need to be signaled to the timer to stop
+    // TODO: stop timer after an error
+    // TODO: can't show error in the widget, use notifications
     if (!existActivityResp) {
       console.log({
         err: true,
@@ -438,7 +440,7 @@ const Model = (() => {
       return;
     }
 
-    let query = `update events set duration=? where id=?;`;
+    let query = `update events set duration=duration+? where id=?;`;
     const params = [duration, eventID];
     const resp = await dbHandler(query, params);
 
@@ -483,7 +485,7 @@ const Model = (() => {
     // console.log(resp.data)
     return {
       err: false,
-      data: `${activity} : ${tools.secToTime(resp.data[0].duration)}`,
+      data: resp.data[0].duration,
     };
   };
 
@@ -506,15 +508,13 @@ const { exec } = require('child_process');
 
 const timerObj = {
   currentActivity: '',
+  durationChache: {},
   running: false,
   intervalID: '',
+  startDate: Date.now(),
+  eventID: tools.rand.uuid(),
+  interval: 60000,
   run: (socket) => {
-    const state = {
-      start: Date.now(),
-      eventID: tools.rand.uuid(),
-      interval: 3000,
-    };
-
     if (!timerObj.currentActivity) {
       return;
     }
@@ -522,31 +522,48 @@ const timerObj = {
 
     const incrementDuration = () => {
       // interval is passed as seconds
-      const duration = Math.floor((Date.now() - state.start) / 1000);
+      const duration = Math.floor((Date.now() - timerObj.startDate) / 1000);
       // console.log(duration);
+      // NOTE: there is a tiny gap where the client could get a value older by one interval
+      timerObj.startDate = Date.now();
       Model.incrementDuration(
         socket,
         timerObj.currentActivity,
-        state.eventID,
+        timerObj.eventID,
         duration
       );
     };
 
-    timerObj.intervalID = setInterval(incrementDuration, state.interval);
+    timerObj.intervalID = setInterval(incrementDuration, timerObj.interval);
   },
   stop: () => {
     timerObj.running = false;
+    timerObj.currentActivity = undefined;
     clearInterval(timerObj.intervalID);
   },
 };
 
 const port = 8989;
 
-process.on('SIGTERM', () => {
-  exec('touch shuttingdowwwww');
-  // save()
-  process.exit(0);
-});
+// process.on('exit', () => {
+//   exec('touch exitting');
+// });
+process.on('SIGTERM', function onSigterm () {
+  exec('touch exitting');
+  console.info('Got SIGTERM. Graceful shutdown start', new Date().toISOString())
+  // start graceul shutdown here
+  process.exit(0)
+})
+
+// process.on('SIGINT', () => {
+//   exec('touch siginting');
+// });
+// process.on('SIGKILL', () => {
+//   exec('touch sigkilling');
+// });
+// process.on('SIGTERM', () => {
+//   exec('touch sigterming');
+// });
 
 const actions = {
   init: (socket) => {
@@ -584,14 +601,42 @@ const actions = {
     Model.r(socket, request.args[0]);
   },
   w: async (socket, request) => {
-    if (timerObj.currentActivity || request?.args[0]) {
-      const resp = await Model.getDayDuration(
-        socket,
-        request?.args[0] ?? timerObj.currentActivity
+    const activity = request?.args[0] || timerObj.currentActivity || undefined;
+
+    if (!activity) {
+      socket.write(
+        JSON.stringify({
+          err: false,
+          data: 'no activity\nno activity was specified or currently running',
+        })
       );
-      return socket.write(JSON.stringify(resp));
+      return;
     }
-    socket.write(JSON.stringify({ err: false, data: 'no activity\nno activity was specified or currently running' }));
+
+    let message = '';
+    // could be undefined or 0
+    if (!timerObj.durationChache?.[activity]) {
+      // console.log('hitting the db', timerObj.durationChache);
+      const resp = await Model.getDayDuration(socket, activity);
+      const unstoredDuration = timerObj.running
+        ? Math.floor((Date.now() - timerObj.startDate) / 1000)
+        : 0;
+      const duration = unstoredDuration + resp.data;
+      message = `${activity}: ${tools.secToTime(duration)}`;
+
+      // cach result
+      timerObj.durationChache[activity] = duration;
+    } else {
+      // console.log('hitting the cache', timerObj.durationChache);
+      const unstoredDuration = timerObj.running
+        ? Math.floor((Date.now() - timerObj.startDate) / 1000)
+        : 0;
+      const duration = unstoredDuration + timerObj.durationChache[activity];
+      // console.log(duration);
+      message = `${activity}: ${tools.secToTime(duration)}`;
+    }
+
+    socket.write(JSON.stringify({ err: false, data: message }));
   },
   c: async (socket) => {
     // console.log(timerObj.running)
@@ -605,6 +650,7 @@ const actions = {
     );
   },
   s: (socket, request) => {
+    //TODO: store the date after a stop
     const currentActivity = request.args[0];
     if (!currentActivity) {
       return socket.write(
@@ -630,6 +676,12 @@ const actions = {
       timerObj.run(socket);
       message += `activity ${currentActivity} has started`;
     }
+
+    exec(`sudo notify-send -t 3000 '${message}'`, (err, out) => {
+      if (err) {
+        console.log(err);
+      }
+    });
 
     socket.write(
       JSON.stringify({
