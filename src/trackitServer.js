@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// TODO: something is fucked up while getting the widget
+// TODO: something is fucked up when stopping an activity
+
 // TODO:
 // [X] list activities
 // [X] list events of an activity
@@ -19,6 +22,7 @@
 
 // =================================================  Tools
 const crypto = require('crypto');
+const fs = require('fs');
 const tools = (() => {
   const rand = {
     uuid: () => {
@@ -49,7 +53,23 @@ const tools = (() => {
     return hours + ':' + minutes + ':' + seconds;
   };
 
-  return { rand, secToTime };
+  const log = (type, message) => {
+    fs.writeFile('~/home/trackit/logs', `${getDate} | ${type} | ${message}`);
+  };
+
+  const getDate = () => {
+    const date = new Date();
+
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const h = date.getHours();
+    const m = date.getMinutes();
+    const s = date.getSeconds();
+    return `${year}-${month}-${day} ${h}:${m}:${s}`;
+  };
+
+  return { rand, secToTime, getDate, log };
 })();
 const path = require('path');
 
@@ -58,7 +78,6 @@ const Vars = {
 };
 
 // =================================================  Model
-const fs = require('fs');
 const sqlite = require('sqlite3').verbose();
 const Model = (() => {
   fs.access(Vars.storeOutput, fs.F_OK, (err) => {
@@ -417,18 +436,7 @@ const Model = (() => {
       let query = `insert into events(id, activity, date, duration)
                 values(?, ?, ?, ?)`;
       // js dates are ughhh
-      const accDate = ((d) => {
-        const year = d.getFullYear();
-        const month = d.getMonth() + 1;
-        const date = d.getDate();
-        const h = d.getHours();
-        const m = d.getMinutes();
-        const s = d.getSeconds();
-        return `${year}-${month}-${date} ${h}:${m}:${s}`;
-      })(new Date());
-
-      // console.log(accDate);
-      const params = [eventID, activity, accDate, duration];
+      const params = [eventID, activity, tools.getDate(), duration];
       const resp = await dbHandler(query, params);
 
       if (resp.err) {
@@ -508,17 +516,21 @@ const { exec } = require('child_process');
 
 const timerObj = {
   currentActivity: '',
-  durationChache: {},
+  durationChache: 0,
   running: false,
   intervalID: '',
   startDate: Date.now(),
-  eventID: tools.rand.uuid(),
+  eventID: '',
   interval: 60000,
-  run: (socket) => {
+  run: async (socket) => {
     if (!timerObj.currentActivity) {
       return;
     }
+    timerObj.eventID = tools.rand.uuid();
     timerObj.running = true;
+    timerObj.startDate = Date.now();
+    const resp = await Model.getDayDuration(socket, timerObj.currentActivity);
+    timerObj.durationChache = resp.data;
 
     const incrementDuration = () => {
       // interval is passed as seconds
@@ -526,6 +538,7 @@ const timerObj = {
       // console.log(duration);
       // NOTE: there is a tiny gap where the client could get a value older by one interval
       timerObj.startDate = Date.now();
+      timerObj.durationChache += duration;
       Model.incrementDuration(
         socket,
         timerObj.currentActivity,
@@ -536,10 +549,18 @@ const timerObj = {
 
     timerObj.intervalID = setInterval(incrementDuration, timerObj.interval);
   },
-  stop: () => {
+  stop: (socket) => {
+    Model.incrementDuration(
+      socket,
+      timerObj.currentActivity,
+      timerObj.eventID,
+      Math.floor((Date.now() - timerObj.startDate) / 1000)
+    );
+    timerObj.startDate = 0;
+    timerObj.durationChache = 0;
     timerObj.running = false;
-    timerObj.currentActivity = undefined;
     clearInterval(timerObj.intervalID);
+    timerObj.currentActivity = '';
   },
 };
 
@@ -548,12 +569,15 @@ const port = 8989;
 // process.on('exit', () => {
 //   exec('touch exitting');
 // });
-process.on('SIGTERM', function onSigterm () {
+process.on('SIGTERM', function onSigterm() {
   exec('touch exitting');
-  console.info('Got SIGTERM. Graceful shutdown start', new Date().toISOString())
+  console.info(
+    'Got SIGTERM. Graceful shutdown start',
+    new Date().toISOString()
+  );
   // start graceul shutdown here
-  process.exit(0)
-})
+  process.exit(0);
+});
 
 // process.on('SIGINT', () => {
 //   exec('touch siginting');
@@ -615,23 +639,25 @@ const actions = {
 
     let message = '';
     // could be undefined or 0
-    if (!timerObj.durationChache?.[activity]) {
+    if (
+      !timerObj.running ||
+      (request.args[0] && timerObj.currentActivity !== request.args[0])
+    ) {
       // console.log('hitting the db', timerObj.durationChache);
       const resp = await Model.getDayDuration(socket, activity);
-      const unstoredDuration = timerObj.running
-        ? Math.floor((Date.now() - timerObj.startDate) / 1000)
-        : 0;
-      const duration = unstoredDuration + resp.data;
-      message = `${activity}: ${tools.secToTime(duration)}`;
+      // console.log(resp.data)
 
-      // cach result
-      timerObj.durationChache[activity] = duration;
-    } else {
+      message = `${activity}: ${tools.secToTime(resp.data)}`;
+    } else if (
+      !request.args[0] ||
+      timerObj.currentActivity == request.args[0]
+    ) {
       // console.log('hitting the cache', timerObj.durationChache);
       const unstoredDuration = timerObj.running
         ? Math.floor((Date.now() - timerObj.startDate) / 1000)
         : 0;
-      const duration = unstoredDuration + timerObj.durationChache[activity];
+      const duration = unstoredDuration + timerObj.durationChache;
+      // console.log(timerObj.durationChache);
       // console.log(duration);
       message = `${activity}: ${tools.secToTime(duration)}`;
     }
@@ -651,30 +677,32 @@ const actions = {
   },
   s: (socket, request) => {
     //TODO: store the date after a stop
-    const currentActivity = request.args[0];
-    if (!currentActivity) {
+    const targetActivity = request.args[0];
+    if (!targetActivity) {
       return socket.write(
         JSON.stringify({ err: true, data: 'no activity was sepcified' })
       );
     }
 
     let message = ''; // initialize bcz js sucks
-    if (timerObj.running) {
-      timerObj.stop();
-      timerObj.running = false;
-      message += `activity ${timerObj.currentActivity} has stoped`;
 
-      if (timerObj.currentActivity != currentActivity) {
-        timerObj.currentActivity = currentActivity;
+    if (timerObj.running) {
+      if (timerObj.currentActivity !== targetActivity) {
+        message += `activity ${timerObj.currentActivity} has stoped`;
+        // timerObj.currentActivity is set to undefined after timerObj.stop()
+        timerObj.stop(socket);
+
+        timerObj.currentActivity = targetActivity;
         timerObj.run(socket);
-        message += `\nactivity ${currentActivity} has started`;
+        message += `\nactivity ${targetActivity} has started`;
       } else {
-        timerObj.currentActivity = '';
+        message += `activity ${timerObj.currentActivity} has stoped`;
+        timerObj.stop(socket);
       }
     } else {
-      timerObj.currentActivity = currentActivity;
+      timerObj.currentActivity = targetActivity;
       timerObj.run(socket);
-      message += `activity ${currentActivity} has started`;
+      message += `activity ${targetActivity} has started`;
     }
 
     exec(`sudo notify-send -t 3000 '${message}'`, (err, out) => {
