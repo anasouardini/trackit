@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-// TODO: something is fucked up while getting the widget
-// TODO: something is fucked up when stopping an activity
+// TODO: show more info in the widget. e.g current duration and total day duration
 
 // TODO:
 // [X] list activities
@@ -17,6 +16,7 @@
 // [ ] gracefull shutdown
 // [ ] activities should have IDs
 // [X] notifications
+// [ ] client should run the server if it's not running
 
 // (async()=>{((ms)=>new Promise((r)=>setTimeout(r, ms)))(3000);})()
 
@@ -727,10 +727,10 @@ const server = net.createServer((socket) => {
   socket.on('data', (data) => {
     const request = JSON.parse(data);
 
-    if (!actions?.[request.action]) {
+    if (!request.action || !actions?.[request.action]) {
       socket.write(JSON.stringify({ err: true, data: 'command not found' }));
+      return;
     }
-    // console.log('action: ',request.action)
     actions[request.action](socket, request);
   });
 
