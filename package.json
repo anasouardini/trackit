@@ -19,8 +19,8 @@
     "format": "prettier . --write",
     "testOnce": "vitest --run",
     "formatCheck": "prettier . --check",
-    "lint": "tsc",
-    "build": "tsc --build",
+    "lint": "tsc --noEmit",
+    "build": "tsc",
     "ci": "npm run formatCheck && npm run lint && npm run testOnce && npm run build",
     "release": "npm run ci && npx changeset && npx changeset publish"
   },
