@@ -21,7 +21,7 @@ const client = new net.Socket();
 
 function startServer() {
   const currentDir = path.dirname(__dirname);
-  const serverFilePath = `${currentDir}/bin/server.js`;
+  const serverFilePath = path.join(currentDir, "bin", "server.js");
   console.log(`lunching server from ${serverFilePath}`);
   const serverChildProcess = fork(serverFilePath, [], {
     detached: true,
