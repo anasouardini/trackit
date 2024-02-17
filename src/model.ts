@@ -39,7 +39,7 @@ const init = async (socket) => {
           err: true,
           query: list[i][0],
           data: "db err - initializing db",
-        })
+        }),
       );
     }
   }
@@ -56,18 +56,18 @@ const getActivities = async (socket, props?) => {
         JSON.stringify({
           err: true,
           data: "db err - listing activities",
-        })
+        }),
       );
     }
     if (typeof resp.data == "string") {
       console.log(
-        "Err [model.getActivities] -> expected rows/array from db, got a string instead"
+        "Err [model.getActivities] -> expected rows/array from db, got a string instead",
       );
       socket.write(
         JSON.stringify({
           err: true,
           data: "server err - listing activities",
-        })
+        }),
       );
       return;
     }
@@ -96,7 +96,7 @@ const getActivities = async (socket, props?) => {
       JSON.stringify({
         err: true,
         data: "db err - previewing activity",
-      })
+      }),
     );
   }
 
@@ -128,7 +128,7 @@ const getEvents = async (socket, props?) => {
         JSON.stringify({
           err: true,
           data: "db err - listing events",
-        })
+        }),
       );
       return;
     }
@@ -158,7 +158,7 @@ const getEvents = async (socket, props?) => {
       JSON.stringify({
         err: true,
         data: `db err - previewing event ${props.filterProperty}'`,
-      })
+      }),
     );
   }
 
@@ -227,7 +227,7 @@ const createActivity = async (socket, props) => {
       JSON.stringify({
         err: true,
         data: `db err - activity ${props.title} already exists`,
-      })
+      }),
     );
   }
 
@@ -245,7 +245,7 @@ const createActivity = async (socket, props) => {
       JSON.stringify({
         err: true,
         data: "db err - creating activity",
-      })
+      }),
     );
   }
 
@@ -253,7 +253,7 @@ const createActivity = async (socket, props) => {
     JSON.stringify({
       err: false,
       data: `new activity was created:\n${JSON.stringify(props, undefined, 2)}`,
-    })
+    }),
   );
 };
 
@@ -264,7 +264,7 @@ const removeActivity = async (socket, title) => {
       JSON.stringify({
         err: true,
         data: `db err - activity ${title} doesn't exists`,
-      })
+      }),
     );
   }
 
@@ -275,7 +275,7 @@ const removeActivity = async (socket, title) => {
   if (resp.err) {
     console.log(resp);
     socket.write(
-      JSON.stringify({ err: true, data: "db err - deleting activity" })
+      JSON.stringify({ err: true, data: "db err - deleting activity" }),
     );
   }
   console.log(resp);
@@ -284,7 +284,7 @@ const removeActivity = async (socket, title) => {
     JSON.stringify({
       err: false,
       data: `activity ${title} successfully deleted`,
-    })
+    }),
   );
 };
 
@@ -295,7 +295,7 @@ const updateActivity = async (socket, props) => {
       JSON.stringify({
         err: true,
         data: `db err - activity ${props.title} doesn't exists`,
-      })
+      }),
     );
   }
 
@@ -306,7 +306,7 @@ const updateActivity = async (socket, props) => {
   if (resp.err) {
     console.log(resp);
     socket.write(
-      JSON.stringify({ err: true, data: "db err - deleting activity" })
+      JSON.stringify({ err: true, data: "db err - deleting activity" }),
     );
   }
   console.log(resp);
@@ -315,7 +315,7 @@ const updateActivity = async (socket, props) => {
     JSON.stringify({
       err: false,
       data: `activity ${props.title} successfully deleted`,
-    })
+    }),
   );
 };
 
@@ -342,7 +342,7 @@ const incrementDuration = async (_, activity, eventID, duration) => {
 
     if (resp.err) {
       console.log(
-        JSON.stringify({ err: true, data: "db err - creating new event" })
+        JSON.stringify({ err: true, data: "db err - creating new event" }),
       );
     }
 
@@ -358,7 +358,7 @@ const incrementDuration = async (_, activity, eventID, duration) => {
       JSON.stringify({
         err: true,
         data: "db err - incrementing event duration",
-      })
+      }),
     );
   }
   // console.log(resp);
@@ -366,7 +366,7 @@ const incrementDuration = async (_, activity, eventID, duration) => {
 
 const getDuration = async (
   activity,
-  duration
+  duration,
 ): Promise<{ err: boolean; data: string | Record<string, any>[] }> => {
   const existActivityResp = await activityExists(activity);
   if (!existActivityResp) {

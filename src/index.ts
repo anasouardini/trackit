@@ -55,7 +55,7 @@ function connectToServer() {
 
 client.on("error", (err) => {
   console.log(
-    `Error -> could not connect to server on ${options.server.host}:${options.server.port}`
+    `Error -> could not connect to server on ${options.server.host}:${options.server.port}`,
   );
   if (options.retries.count !== 0) {
     startTheServer();

@@ -27,19 +27,19 @@ const db = new sqlite.Database(
       utils.log("err", "db connection failed");
       console.log(err);
     }
-  }
+  },
 );
 
 const dbHandler = (
   query,
-  param
+  param,
 ): Promise<{ err: boolean; data: string | Record<string, any>[] }> => {
   const promise = new Promise(function (resolve) {
     db.all(query, param, (err, rows) => {
       if (err) {
         utils.log(
           "err",
-          `db query failed - query: ${query}; params: ${param}; err: ${err}.`
+          `db query failed - query: ${query}; params: ${param}; err: ${err}.`,
         );
         resolve({ err: true, data: err });
       } else {
