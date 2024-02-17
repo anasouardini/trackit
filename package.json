@@ -1,7 +1,6 @@
 {
-  "name": "trackit",
-  "version": "0.1.0",
-  "private": false,
+  "name": "clockify",
+  "version": "0.1.1",
   "description": "A time tracker to make sure that you really spent the time you think you spent working, studying, etc.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -23,7 +22,7 @@
     "lint": "tsc",
     "build": "tsc --build",
     "ci": "npm run formatCheck && npm run lint && npm run testOnce && npm run build",
-    "release": "npm run ci && changeset publish"
+    "release": "npm run ci && npx changeset && npx changeset publish"
   },
   "dependencies": {
     "sqlite3": "^5.1.4"
