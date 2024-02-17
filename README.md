@@ -1,4 +1,4 @@
-# Simple Time Tracker
+# Clockify: Simple Time Tracker
 
 A very simple tool to keep an eye on where you spend your time, it's meant to track time accurately so that you don't wonder where all the time in the day goes at the end of it.
 

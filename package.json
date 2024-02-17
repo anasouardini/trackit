@@ -1,6 +1,6 @@
 {
   "name": "clockify",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A time tracker to make sure that you really spent the time you think you spent working, studying, etc.",
   "license": "MIT",
   "keywords": [
@@ -22,7 +22,7 @@
     "lint": "tsc --noEmit",
     "build": "tsc",
     "ci": "npm run formatCheck && npm run lint && npm run testOnce && npm run build",
-    "release": "npm run ci && npx changeset && npx changeset publish"
+    "release": "npm run ci && npx changeset && git add . && git commit -m 'release: creating a release' && npx changeset publish && git push origin main"
   },
   "dependencies": {
     "sqlite3": "^5.1.4"
