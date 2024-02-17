@@ -1,20 +1,41 @@
 {
   "name": "trackit",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "server": "nodemon ./src/server.js",
-    "client": "nodemon ./src/trackit.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "version": "0.1.0",
+  "private": false,
+  "description": "A time tracker to make sure that you really spent the time you think you spent working, studying, etc.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dis/index.d.ts",
+  "license": "MIT",
+  "keywords": [
+    "time tracking",
+    "habits tracker"
+  ],
+  "author": "anasouardini",
+  "repository": {
+    "url": "https://github.com/anasouardini/trackit"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "scripts": {
+    "dev": "nodemon ./src/server.js",
+    "format": "prettier . --write",
+    "testOnce": "vitest --run",
+    "formatCheck": "prettier . --check",
+    "lint": "tsc",
+    "build": "tsc --build",
+    "ci": "npm run formatCheck && npm run lint && npm run testOnce && npm run build",
+    "release": "npm run ci && changeset publish"
+  },
   "dependencies": {
     "sqlite3": "^5.1.4"
   },
   "devDependencies": {
-    "nodemon": "^2.0.20"
+    "@changesets/cli": "^2.27.1",
+    "@types/node": "^20.11.19",
+    "better-sqlite3": "^9.4.1",
+    "nodemon": "^2.0.20",
+    "prettier": "^3.2.5",
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.3.0"
   }
 }

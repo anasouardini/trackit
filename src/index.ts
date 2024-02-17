@@ -1,20 +1,15 @@
-#!/usr/bin/env node
+import net from "net";
 
-// const {execSync} = require('child_process');
-// execSync('sleep 1');
-
-const net = require('net');
-
-const client = net.Socket();
+const client = new net.Socket();
 
 client.connect(8989);
 
-client.on('data', (data) => {
+client.on("data", (data: string) => {
   const msg = JSON.parse(data);
 
   if (msg.err) {
     // return console.log('err:', msg.data);
-    return console.log('err');
+    return console.log("err");
   }
 
   console.log(msg.data);
@@ -22,7 +17,7 @@ client.on('data', (data) => {
   process.exit(0);
 });
 const data = {
-  type: 'cmd',
+  type: "cmd",
   action: process.argv[2],
   args: process.argv.slice(3),
 };
