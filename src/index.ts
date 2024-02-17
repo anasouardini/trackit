@@ -1,4 +1,4 @@
-#!/bin/node
+#!/bin/env node
 
 import net from "net";
 import { spawn, fork } from "child_process";

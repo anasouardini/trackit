@@ -1,5 +1,3 @@
-node_modules
-
 # Logs
 logs
 *.log
@@ -31,4 +29,6 @@ tsup.config.ts
 nodemon.json
 .prettierignore
 .github
+.hooks
 .changeset
+package.json
