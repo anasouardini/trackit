@@ -1,6 +1,9 @@
+#!/bin/node
+
 import net from "net";
-import { spawn } from "child_process";
+import { spawn, fork } from "child_process";
 import path from "path";
+import utils from "./utils";
 
 const options = {
   server: {
@@ -16,15 +19,35 @@ const options = {
 
 const client = new net.Socket();
 
-function startTheServer() {
+function startServer() {
   const currentDir = path.dirname(__dirname);
-  const serverPath = `${currentDir}/bin/server.js`;
-  console.log(`lunching server from ${serverPath}`);
-  const serverChildProcess = spawn("node", ["./bin/server.js"], {
+  const serverFilePath = `${currentDir}/bin/server.js`;
+  console.log(`lunching server from ${serverFilePath}`);
+  const serverChildProcess = fork(serverFilePath, [], {
     detached: true,
     stdio: "ignore", // no need for shell IO when I have sockets
   });
+  serverChildProcess.disconnect(); // closing IPC channel
   serverChildProcess.unref();
+}
+
+function enqueueExit(status: number) {
+  setTimeout(() => {
+    process.exit(status);
+  }, 10);
+}
+
+function checkConnection() {
+  return new Promise((resolve) => {
+    const check = new net.Socket();
+    check.connect(options.server.port, options.server.host, () => {
+      check.destroy();
+      resolve(true);
+    });
+    check.on("error", () => {
+      resolve(false);
+    });
+  });
 }
 
 function connectToServer() {
@@ -36,11 +59,12 @@ function connectToServer() {
 
       if (msg.err) {
         console.log("err:");
+        // process.exit(0);
       }
 
       console.log(msg.data);
 
-      process.exit(0);
+      enqueueExit(0);
     });
 
     const data = {
@@ -53,16 +77,20 @@ function connectToServer() {
   });
 }
 
-client.on("error", (err) => {
-  console.log(
-    `Error -> could not connect to server on ${options.server.host}:${options.server.port}`,
-  );
-  if (options.retries.count !== 0) {
-    startTheServer();
-
-    setTimeout(connectToServer, options.retries.interval);
+(async () => {
+  while (1) {
+    console.log("checking connection...");
+    const isServerUp = await checkConnection();
     options.retries.count--;
-  }
-});
 
-connectToServer();
+    if (isServerUp || options.retries.count === 0) {
+      // server is up
+      connectToServer();
+      break;
+    }
+
+    // server is down
+    startServer();
+    await utils.sleep(options.retries.interval);
+  }
+})();
