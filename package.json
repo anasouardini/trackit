@@ -22,7 +22,7 @@
     "lint": "tsc --noEmit",
     "build": "tsc",
     "ci": "npm run formatCheck && npm run lint && npm run testOnce && npm run build",
-    "release": "npm run ci && npx changeset && git add . && git commit -m 'release: creating a release' && npx changeset publish && git push origin main"
+    "release": "npm run ci && npx changeset && git add . && git commit -m 'release: creating a release' && npx changeset publish && git push origin main && git push origin --tags"
   },
   "dependencies": {
     "sqlite3": "^5.1.4"
