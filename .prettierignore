@@ -1,5 +1,6 @@
 dist
 build
+bin
 node_modules
 coverage
 *.yaml

@@ -28,5 +28,7 @@ src
 tsconfig.json
 pnpm-lock.yaml
 tsup.config.ts
+nodemon.json
+.prettierignore
 .github
 .changeset

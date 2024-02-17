@@ -2,20 +2,20 @@
   "name": "clockify",
   "version": "0.1.1",
   "description": "A time tracker to make sure that you really spent the time you think you spent working, studying, etc.",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dis/index.d.ts",
   "license": "MIT",
   "keywords": [
-    "time tracking",
+    "time tracker",
     "habits tracker"
   ],
   "author": "anasouardini",
   "repository": {
     "url": "https://github.com/anasouardini/trackit"
   },
+  "bin": {
+    "clockify": "./bin/index.js"
+  },
   "scripts": {
-    "dev": "nodemon ./src/server.js",
+    "dev": "nodemon ./src/index.ts ./src/server.ts",
     "format": "prettier . --write",
     "testOnce": "vitest --run",
     "formatCheck": "prettier . --check",
@@ -31,9 +31,9 @@
     "@changesets/cli": "^2.27.1",
     "@types/node": "^20.11.19",
     "better-sqlite3": "^9.4.1",
-    "nodemon": "^2.0.20",
+    "nodemon": "^3.0.3",
     "prettier": "^3.2.5",
-    "tsup": "^8.0.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "vitest": "^1.3.0"
   }

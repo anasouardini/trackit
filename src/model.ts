@@ -39,7 +39,7 @@ const init = async (socket) => {
           err: true,
           query: list[i][0],
           data: "db err - initializing db",
-        }),
+        })
       );
     }
   }
@@ -56,18 +56,18 @@ const getActivities = async (socket, props?) => {
         JSON.stringify({
           err: true,
           data: "db err - listing activities",
-        }),
+        })
       );
     }
     if (typeof resp.data == "string") {
       console.log(
-        "Err [model.getActivities] -> expected rows/array from db, got a string instead",
+        "Err [model.getActivities] -> expected rows/array from db, got a string instead"
       );
       socket.write(
         JSON.stringify({
           err: true,
           data: "server err - listing activities",
-        }),
+        })
       );
       return;
     }
@@ -96,7 +96,7 @@ const getActivities = async (socket, props?) => {
       JSON.stringify({
         err: true,
         data: "db err - previewing activity",
-      }),
+      })
     );
   }
 
@@ -104,13 +104,14 @@ const getActivities = async (socket, props?) => {
   if (respData.length == 0) {
     respData = "activity not found";
   } else if (respData.length == 1) {
+    // @ts-ignore
     respData = respData[0];
   }
 
   // console.log(respData);
   respData = props?.selectProperty ? Object.values(respData)[0] : respData;
 
-  let onelineItem = [];
+  let onelineItem: any[] = [];
   Object.values(respData).forEach((val) => {
     onelineItem.push(val);
   });
@@ -127,12 +128,14 @@ const getEvents = async (socket, props?) => {
         JSON.stringify({
           err: true,
           data: "db err - listing events",
-        }),
+        })
       );
+      return;
     }
 
+    // @ts-ignore
     const onelineEntries = resp.data.map((itemObj) => {
-      let onelineItem = [];
+      let onelineItem: any[] = [];
       Object.values(itemObj).forEach((val) => {
         onelineItem.push(val);
       });
@@ -155,22 +158,23 @@ const getEvents = async (socket, props?) => {
       JSON.stringify({
         err: true,
         data: `db err - previewing event ${props.filterProperty}'`,
-      }),
+      })
     );
   }
 
-  let respData = resp.data;
-  if (respData.length == 0) {
+  let respData;
+  if (resp.data.length == 0) {
     respData = "event not found";
-  } else if (respData.length == 1) {
+  } else if (resp.data.length == 1) {
     respData = respData[0];
   }
 
   // console.log(respData);
   respData = props?.selectProperty ? Object.values(respData)[0] : respData;
 
+  // @ts-ignore
   const onelineEntries = resp.data.map((itemObj) => {
-    let onelineItem = [];
+    let onelineItem: any[] = [];
     Object.values(itemObj).forEach((val) => {
       onelineItem.push(val);
     });
@@ -187,12 +191,12 @@ const activityExists = async (activityTitle) => {
   const resp = await dbHandler(query, params);
   if (resp.err) {
     console.log(resp);
-    socket.write(
-      JSON.stringify({
-        err: true,
-        data: "db err - checking if activity exists",
-      }),
-    );
+    // socket.write(
+    //   JSON.stringify({
+    //     err: true,
+    //     data: "db err - checking if activity exists",
+    //   })
+    // );
   }
 
   return resp.data.length;
@@ -205,12 +209,12 @@ const eventExists = async (eventID) => {
   const resp = await dbHandler(query, params);
   if (resp.err) {
     console.log(resp);
-    socket.write(
-      JSON.stringify({
-        err: true,
-        data: "db err - checking if activity exists",
-      }),
-    );
+    // socket.write(
+    //   JSON.stringify({
+    //     err: true,
+    //     data: "db err - checking if activity exists",
+    //   })
+    // );
   }
 
   return resp.data.length;
@@ -223,7 +227,7 @@ const createActivity = async (socket, props) => {
       JSON.stringify({
         err: true,
         data: `db err - activity ${props.title} already exists`,
-      }),
+      })
     );
   }
 
@@ -241,7 +245,7 @@ const createActivity = async (socket, props) => {
       JSON.stringify({
         err: true,
         data: "db err - creating activity",
-      }),
+      })
     );
   }
 
@@ -249,7 +253,7 @@ const createActivity = async (socket, props) => {
     JSON.stringify({
       err: false,
       data: `new activity was created:\n${JSON.stringify(props, undefined, 2)}`,
-    }),
+    })
   );
 };
 
@@ -260,7 +264,7 @@ const removeActivity = async (socket, title) => {
       JSON.stringify({
         err: true,
         data: `db err - activity ${title} doesn't exists`,
-      }),
+      })
     );
   }
 
@@ -271,7 +275,7 @@ const removeActivity = async (socket, title) => {
   if (resp.err) {
     console.log(resp);
     socket.write(
-      JSON.stringify({ err: true, data: "db err - deleting activity" }),
+      JSON.stringify({ err: true, data: "db err - deleting activity" })
     );
   }
   console.log(resp);
@@ -280,7 +284,7 @@ const removeActivity = async (socket, title) => {
     JSON.stringify({
       err: false,
       data: `activity ${title} successfully deleted`,
-    }),
+    })
   );
 };
 
@@ -291,7 +295,7 @@ const updateActivity = async (socket, props) => {
       JSON.stringify({
         err: true,
         data: `db err - activity ${props.title} doesn't exists`,
-      }),
+      })
     );
   }
 
@@ -302,7 +306,7 @@ const updateActivity = async (socket, props) => {
   if (resp.err) {
     console.log(resp);
     socket.write(
-      JSON.stringify({ err: true, data: "db err - deleting activity" }),
+      JSON.stringify({ err: true, data: "db err - deleting activity" })
     );
   }
   console.log(resp);
@@ -311,7 +315,7 @@ const updateActivity = async (socket, props) => {
     JSON.stringify({
       err: false,
       data: `activity ${props.title} successfully deleted`,
-    }),
+    })
   );
 };
 
@@ -338,7 +342,7 @@ const incrementDuration = async (_, activity, eventID, duration) => {
 
     if (resp.err) {
       console.log(
-        JSON.stringify({ err: true, data: "db err - creating new event" }),
+        JSON.stringify({ err: true, data: "db err - creating new event" })
       );
     }
 
@@ -354,7 +358,7 @@ const incrementDuration = async (_, activity, eventID, duration) => {
       JSON.stringify({
         err: true,
         data: "db err - incrementing event duration",
-      }),
+      })
     );
   }
   // console.log(resp);
@@ -362,8 +366,8 @@ const incrementDuration = async (_, activity, eventID, duration) => {
 
 const getDuration = async (
   activity,
-  duration,
-): Promise<{ err: boolean; data: string }> => {
+  duration
+): Promise<{ err: boolean; data: string | Record<string, any>[] }> => {
   const existActivityResp = await activityExists(activity);
   if (!existActivityResp) {
     return { err: false, data: "no activity" };
@@ -404,6 +408,7 @@ const getDuration = async (
 
   return {
     err: false,
+    // @ts-ignore
     data: utils.secToTime(resp.data[0].duration),
   };
 };
@@ -454,6 +459,7 @@ const getDayDuration = async (_, activity) => {
 
   return {
     err: false,
+    // @ts-ignore
     data: resp.data[0].duration ?? 0,
   };
 };

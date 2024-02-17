@@ -7,13 +7,13 @@
     "module": "CommonJS",
 
     "allowJs": true,
-    "outDir": "./dist",
+    "outDir": "./bin",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noImplicitAny": false,
     "skipLibCheck": true,
-    "noEmit": true,
+    // "noEmit": true,
 
     "moduleResolution": "node",
     "baseUrl": "./src",
@@ -21,6 +21,6 @@
       "$/*": ["./*"]
     }
   },
-  "include": ["*.ts", "*.tsx"],
-  "exclude": ["node_modules", "dist", "build", ".git"]
+  "include": ["./src/index.ts", "./src/server.ts"],
+  "exclude": ["node_modules", "dist", "build", "bin", ".git"]
 }
