@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-// TODO: show more info in the widget. e.g current duration and total day duration
-
 // TODO:
+// [ ] show more info in the widget. e.g current duration and total day duration
+// [ ] add a new table for stats; prevent duplicate calculations.
 // [X] list activities
 // [X] list events of an activity
 // [X] list specific activitie details(title, bg, icon, createDate)
@@ -17,13 +17,38 @@
 // [ ] activities should have IDs
 // [X] notifications
 // [ ] client should run the server if it's not running
+// [ ] save count and reset in-memory counter after midnight.
+// [ ] seperate date and time in the events table.
 
-// (async()=>{((ms)=>new Promise((r)=>setTimeout(r, ms)))(3000);})()
+// const sleep = (ms)=>new Promise((r)=>setTimeout(r, ms))
 
 // =================================================  Tools
 const crypto = require('crypto');
 const fs = require('fs');
 const tools = (() => {
+  const notify = (title, message, color) => {
+    // exec("export DBUS_SESSION_BUS_ADDRESS=$(dbus-launch --exit-with-session | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')",
+    //   (err, out) => {
+    //     if (err) {
+    //       message += '\nerro exporting vars for dbus session';
+    //       tools.log('err', `notification failed. message: ${message}`);
+    //     }
+    //   }
+    // )
+    exec(
+      // `notify-send -t 3000 '<p style="background:${color}">${message}<p>'`,
+      // `notify-send -t 3000 "<span color='#57dafd' font='26px'><i><b>$phrase</b></i></span>" >/dev/null 2>&1`,
+      `notify-send -t 4000 "${
+        title ? title : 'Activities'
+      }" "<span color='${color}' font='19px'><b>${message}</b></span>"`,
+      (err, out) => {
+        if (err) {
+          message += '\nerro notifying';
+          tools.log('err', `notification failed. message: ${message}`);
+        }
+      }
+    );
+  };
   const rand = {
     uuid: () => {
       return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) =>
@@ -53,23 +78,37 @@ const tools = (() => {
     return hours + ':' + minutes + ':' + seconds;
   };
 
+  const getDate = (dateStr) => {
+    let date;
+    if (dateStr) {
+      date = new Date(dateStr);
+    } else {
+      date = new Date();
+    }
+
+    const dateTimeProps = {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
+      h: date.getHours(),
+      m: date.getMinutes(),
+      s: date.getSeconds(),
+    };
+
+    Object.keys(dateTimeProps).forEach((propKey) => {
+      let value = dateTimeProps[propKey];
+      if (parseInt(value) < 10) {
+        dateTimeProps[propKey] = '0' + value.toString();
+      }
+    });
+    return `${dateTimeProps.year}-${dateTimeProps.month}-${dateTimeProps.day} ${dateTimeProps.h}:${dateTimeProps.m}:${dateTimeProps.s}`;
+  };
+
   const log = (type, message) => {
-    fs.writeFile('~/home/trackit/logs', `${getDate} | ${type} | ${message}`);
+    fs.writeFile('~/home/trackit/logs', `${getDate()} | ${type} | ${message}`);
   };
 
-  const getDate = () => {
-    const date = new Date();
-
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const h = date.getHours();
-    const m = date.getMinutes();
-    const s = date.getSeconds();
-    return `${year}-${month}-${day} ${h}:${m}:${s}`;
-  };
-
-  return { rand, secToTime, getDate, log };
+  return { rand, secToTime, getDate, log, notify };
 })();
 const path = require('path');
 
@@ -94,6 +133,7 @@ const Model = (() => {
     sqlite.OPEN_READWRITE,
     (err) => {
       if (err) {
+        tools.log('err', 'db connection failed');
         console.log(err);
       }
     }
@@ -102,8 +142,15 @@ const Model = (() => {
   const dbHandler = (query, param) => {
     return new Promise(function (resolve) {
       db.all(query, param, (err, rows) => {
-        if (err) resolve({ err: true, data: err });
-        else resolve({ err: false, data: rows });
+        if (err) {
+          tools.log(
+            'err',
+            `db query failed - query: ${query}; params: ${param}; err: ${err}.`
+          );
+          resolve({ err: true, data: err });
+        } else {
+          resolve({ err: false, data: rows });
+        }
       });
     });
   };
@@ -463,37 +510,98 @@ const Model = (() => {
     // console.log(resp);
   };
 
-  const getDayDuration = async (socket, activity) => {
+  const getDuration = async (activity, duration) => {
     const existActivityResp = await activityExists(activity);
     if (!existActivityResp) {
       return { err: false, data: 'no activity' };
     }
 
     let query = `select sum(duration) as duration from events where activity=?
-              and date >= ? and date < ?;`;
+              and date >= ?;`;
+
+    const freshDate = new Date();
+    const targetDuration = {
+      year: freshDate.getFullYear(),
+      month: freshDate.getMonth() + 1,
+      day: freshDate.getDate(),
+    };
+
+    if (duration === 'm') {
+      targetDuration.day = 1;
+    } else if (duration === 'y') {
+      targetDuration.month = 1;
+      targetDuration.day = 1;
+    }
+
+    let targetDurationString = `${targetDuration.year}-${targetDuration.month}-${targetDuration.day}`;
+    const params = [activity, tools.getDate(targetDurationString)];
+    // console.log(query)
+    // console.log(query);
+    // console.log(targetDurationString);
+    const resp = await dbHandler(query, params);
+    // console.log(resp.data)
+
+    if (resp.err) {
+      return resp;
+    }
+
+    if (!resp.data.length) {
+      return { err: false, data: 'no activity' };
+    }
+
+    return {
+      err: false,
+      data: tools.secToTime(resp.data[0].duration),
+    };
+  };
+
+  const getDayDuration = async (_, activity) => {
+    // was fixing date format in db
+    // {
+    //   let datesList;
+    //   let query = `select date from events;`;
+    //   const resp = await dbHandler(query);
+    //   datesList = resp.data.map((event) => event.date);
+    //   console.log(datesList);
+    //
+    //   datesList.forEach((dateProp) => {
+    //     let query2 = `update events set date=? where date=?;`;
+    //     dbHandler(query2, [tools.getDate(dateProp), dateProp]);
+    //   });
+    // }
+
+    const existActivityResp = await activityExists(activity);
+    if (!existActivityResp) {
+      return { err: false, data: 'no activity' };
+    }
+
+    let query = `select sum(duration) as duration from events where activity=?
+              and date >= ?;`;
+
     const today = ((d) => {
       const year = d.getFullYear();
       const month = d.getMonth() + 1;
       const date = d.getDate();
       return `${year}-${month}-${date} 00:00:00`;
     })(new Date());
-    const tomorrow = ((d) => {
-      const year = d.getFullYear();
-      const month = d.getMonth() + 1;
-      const date = d.getDate();
-      return `${year}-${month}-${date + 1} 00:00:00`;
-    })(new Date());
-    const params = [activity, today, tomorrow];
+    // const tomorrow = ((d) => {
+    //   const year = d.getFullYear();
+    //   const month = d.getMonth() + 1;
+    //   const date = d.getDate();
+    //   return `${year}-${month}-${date + 1} 00:00:00`;
+    // })(new Date());
+    const params = [activity, tools.getDate(today)];
+    // console.log(query)
     // console.log(params)
     const resp = await dbHandler(query, params);
+    // console.log(resp.data)
     if (!resp.data.length) {
       return { err: false, data: 'no activity' };
     }
 
-    // console.log(resp.data)
     return {
       err: false,
-      data: resp.data[0].duration,
+      data: resp.data[0].duration ?? 0,
     };
   };
 
@@ -502,9 +610,10 @@ const Model = (() => {
     init,
     getActivities,
     getEvents,
-    c: createActivity,
-    r: removeActivity,
+    createActivity,
+    removeActivity,
     getDayDuration,
+    getDuration,
     incrementDuration,
     getDayDuration,
   };
@@ -521,7 +630,7 @@ const timerObj = {
   intervalID: '',
   startDate: Date.now(),
   eventID: '',
-  interval: 60000,
+  interval: 120000,
   run: async (socket) => {
     if (!timerObj.currentActivity) {
       return;
@@ -570,12 +679,7 @@ const port = 8989;
 //   exec('touch exitting');
 // });
 process.on('SIGTERM', function onSigterm() {
-  exec('touch exitting');
-  console.info(
-    'Got SIGTERM. Graceful shutdown start',
-    new Date().toISOString()
-  );
-  // start graceul shutdown here
+  // TODO: save timer
   process.exit(0);
 });
 
@@ -592,6 +696,9 @@ process.on('SIGTERM', function onSigterm() {
 const actions = {
   init: (socket) => {
     Model.init(socket);
+  },
+  k: ()=>{
+    process.exit(0);
   },
   la: (socket, request) => {
     if (request.args[0] == 'all' || request.args[0] == 'a') {
@@ -627,51 +734,76 @@ const actions = {
   w: async (socket, request) => {
     const activity = request?.args[0] || timerObj.currentActivity || undefined;
 
-    if (!activity) {
-      socket.write(
-        JSON.stringify({
-          err: false,
-          data: 'no activity\nno activity was specified or currently running',
-        })
-      );
-      return;
-    }
-
     let message = '';
-    // could be undefined or 0
-    if (
-      !timerObj.running ||
-      (request.args[0] && timerObj.currentActivity !== request.args[0])
-    ) {
-      // console.log('hitting the db', timerObj.durationChache);
-      const resp = await Model.getDayDuration(socket, activity);
-      // console.log(resp.data)
 
-      message = `${activity}: ${tools.secToTime(resp.data)}`;
-    } else if (
-      !request.args[0] ||
-      timerObj.currentActivity == request.args[0]
-    ) {
-      // console.log('hitting the cache', timerObj.durationChache);
-      const unstoredDuration = timerObj.running
-        ? Math.floor((Date.now() - timerObj.startDate) / 1000)
-        : 0;
-      const duration = unstoredDuration + timerObj.durationChache;
-      // console.log(timerObj.durationChache);
-      // console.log(duration);
-      message = `${activity}: ${tools.secToTime(duration)}`;
+    if (activity) {
+      // could be undefined or 0
+      if (
+        !timerObj.running ||
+        (request.args[0] && timerObj.currentActivity !== request.args[0])
+      ) {
+        // console.log('hitting the db', timerObj.durationChache);
+        const resp = await Model.getDayDuration(socket, activity);
+        // console.log(resp.data)
+
+        message = `${activity}: ${tools.secToTime(resp.data)}`;
+      } else if (
+        !request.args[0] ||
+        timerObj.currentActivity == request.args[0]
+      ) {
+        // console.log('hitting the cache', timerObj.durationChache);
+        const unstoredDuration = timerObj.running
+          ? Math.floor((Date.now() - timerObj.startDate) / 1000)
+          : 0;
+        const duration = unstoredDuration + timerObj.durationChache;
+        // console.log(timerObj.durationChache);
+        // console.log(duration);
+        message = `${activity}: ${tools.secToTime(duration)}`;
+      }
+    } else {
+      message = 'no activity\nno activity was specified or currently running';
     }
 
     socket.write(JSON.stringify({ err: false, data: message }));
   },
-  c: async (socket) => {
-    // console.log(timerObj.running)
+  d: async (socket, request) => {
+    const resp = await Model.getDuration(request.args[0], request.args[1]);
+
     socket.write(
       JSON.stringify({
         err: false,
-        data: timerObj.running
-          ? `${timerObj.currentActivity} - running`
-          : 'stoped',
+        data: resp.data,
+      })
+    );
+  },
+  v: async (socket, request) => {
+    let message = timerObj.running
+      ? `${timerObj.currentActivity} - running`
+      : 'stopped';
+
+    if (request.args[0] == 'n') {
+      const notificationColors = {
+        false: { color: 'red', text: 'stopped' },
+        true: { color: 'green', text: 'running' },
+      };
+      tools.notify(
+        timerObj.currentActivity,
+        notificationColors[timerObj.running].text,
+        notificationColors[timerObj.running].color
+      );
+
+      return socket.write(
+        JSON.stringify({
+          err: false,
+          data: '',
+        })
+      );
+    }
+
+    socket.write(
+      JSON.stringify({
+        err: false,
+        data: message,
       })
     );
   },
@@ -705,11 +837,15 @@ const actions = {
       message += `activity ${targetActivity} has started`;
     }
 
-    exec(`sudo notify-send -t 3000 '${message}'`, (err, out) => {
-      if (err) {
-        console.log(err);
-      }
-    });
+    const notificationColors = {
+      false: { color: 'red', text: 'stopped' },
+      true: { color: 'green', text: 'running' },
+    };
+    tools.notify(
+      targetActivity,
+      notificationColors[timerObj.running].text,
+      notificationColors[timerObj.running].color
+    );
 
     socket.write(
       JSON.stringify({
