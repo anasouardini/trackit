@@ -3,7 +3,7 @@ import fs from "fs";
 import { exec } from "child_process";
 import vars from "./vars";
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number = 1000) => new Promise((r) => setTimeout(r, ms));
 
 const activityNotify = (activity: string, running: boolean) => {
   const notificationColors = {
