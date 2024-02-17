@@ -77,7 +77,7 @@ const getActivities = async (socket, props?) => {
       Object.values(itemObj).forEach((val) => {
         onelineItem.push(val);
       });
-      return onelineItem.join("|");
+      return onelineItem.join(" | ");
     });
 
     return socket.write(JSON.stringify({ err: false, data: onelineEntries }));
@@ -115,7 +115,7 @@ const getActivities = async (socket, props?) => {
   Object.values(respData).forEach((val) => {
     onelineItem.push(val);
   });
-  socket.write(JSON.stringify({ err: false, data: onelineItem.join("|") }));
+  socket.write(JSON.stringify({ err: false, data: onelineItem.join(" | ") }));
 };
 
 const getEvents = async (socket, props?) => {
@@ -139,7 +139,7 @@ const getEvents = async (socket, props?) => {
       Object.values(itemObj).forEach((val) => {
         onelineItem.push(val);
       });
-      return onelineItem.join("|");
+      return onelineItem.join(" | ");
     });
 
     return socket.write(JSON.stringify({ err: false, data: onelineEntries }));
@@ -178,7 +178,7 @@ const getEvents = async (socket, props?) => {
     Object.values(itemObj).forEach((val) => {
       onelineItem.push(val);
     });
-    return onelineItem.join("|");
+    return onelineItem.join(" | ");
   });
 
   socket.write(JSON.stringify({ err: false, data: onelineEntries }));
