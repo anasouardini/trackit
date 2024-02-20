@@ -15,6 +15,7 @@
 [ ] gracefull shutdown
 [ ] activities should have IDs
 [X] notifications
-[ ] client should run the server if it's not running
-[ ] save count and reset in-memory counter after midnight.
+[X] client should run the server if it's not running
+[ ] save count and reset in-memory counter at 00:00.
 [ ] seperate date and time in the events table.
+[ ] use node-notify
