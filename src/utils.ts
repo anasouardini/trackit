@@ -7,8 +7,8 @@ const sleep = (ms: number = 1000) => new Promise((r) => setTimeout(r, ms));
 
 const activityNotify = (activity: string, running: boolean, socket?: any) => {
   const notificationColors = {
-    false: { color: "red", text: "stopped" },
-    true: { color: "green", text: "running" },
+    false: { color: "red", text: `${activity} stopped` },
+    true: { color: "green", text: `${activity} running` },
   };
   notify(
     activity,

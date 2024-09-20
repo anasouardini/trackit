@@ -162,6 +162,7 @@ const actions = {
     }
 
     socket.write(JSON.stringify({ err: false, data: message }));
+    tools.notify("activity duration", message, "green");
   },
   // get day duration
   d: async (socket, request) => {
