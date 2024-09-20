@@ -254,6 +254,8 @@ const server = net.createServer((socket) => {
 });
 
 server.listen(port, () => {
+  console.log("server is running at port " + port);
+  tools.notify("initial msg", "server started", "green");
   // server is running
   // console.log('server is running at port ' + port);
 });

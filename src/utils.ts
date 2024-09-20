@@ -5,7 +5,7 @@ import vars from "./vars";
 
 const sleep = (ms: number = 1000) => new Promise((r) => setTimeout(r, ms));
 
-const activityNotify = (activity: string, running: boolean) => {
+const activityNotify = (activity: string, running: boolean, socket?: any) => {
   const notificationColors = {
     false: { color: "red", text: "stopped" },
     true: { color: "green", text: "running" },
@@ -14,10 +14,11 @@ const activityNotify = (activity: string, running: boolean) => {
     activity,
     notificationColors[running.toString()].text,
     notificationColors[running.toString()].color,
+    socket,
   );
 };
 
-const notify = (title, message, color) => {
+const notify = (title, message, color, socket?) => {
   // exec("export DBUS_SESSION_BUS_ADDRESS=$(dbus-launch --exit-with-session | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')",
   //   (err, out) => {
   //     if (err) {
@@ -25,17 +26,31 @@ const notify = (title, message, color) => {
   //       tools.log('err', `notification failed. message: ${message}`);
   //     }
   //   }
-  // )
+  // );
   exec(
     // `notify-send -t 3000 '<p style="background:${color}">${message}<p>'`,
     // `notify-send -t 3000 "<span color='#57dafd' font='26px'><i><b>$phrase</b></i></span>" >/dev/null 2>&1`,
-    `notify-send -t 4000 "${
+    `dbus-update-activation-environment XDG_SESSION_TYPE; export $(dbus-launch); notify-send -t 4000 "${
       title ? title : "Activities"
     }" "<span color='${color}' font='19px'><b>${message}</b></span>"`,
+    {
+      env: {
+        ...process.env, // Keep existing environment variables
+        DISPLAY: process.env.DISPLAY || ":0", // Ensure DISPLAY is set
+        DBUS_SESSION_BUS_ADDRESS: process.env.DBUS_SESSION_BUS_ADDRESS, // Add if necessary
+      },
+    },
     (err, out) => {
+      console.log("running notify command", out, err);
       if (err) {
         message += "\nerro notifying";
         log("err", `notification failed. message: ${message}`);
+        socket?.write(
+          JSON.stringify({
+            err: true,
+            data: `notification failed. message: ${message}`,
+          }),
+        );
       }
     },
   );
