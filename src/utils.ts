@@ -101,7 +101,13 @@ const getDate = (dateStr?: string) => {
 };
 
 const log = (type: "err" | "warn" | "info", message: string) => {
-  fs.writeFileSync(vars.logsOutput, `${getDate()} | ${type} | ${message}`);
+  if (!fs.existsSync(vars.appPath)) {
+    fs.mkdirSync(vars.appPath, { recursive: true });
+  }
+
+  fs.writeFileSync(vars.logsOutput, `${getDate()} | ${type} | ${message}`, {
+    flag: "wx",
+  });
 };
 
 export default { notify, activityNotify, rand, sleep, secToTime, getDate, log };

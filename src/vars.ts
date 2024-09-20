@@ -16,7 +16,16 @@ if (process.platform === "win32") {
 
 const appName = "trackit";
 
-export default {
-  storeOutput: `${dataPath}/${appName}/store.db`,
-  logsOutput: `${dataPath}/${appName}/logs`,
+interface Vars {
+  appPath: string;
+  storeOutput: string;
+  logsOutput: string;
+}
+//@ts-ignore
+const vars: Vars = {
+  appPath: `${dataPath}/${appName}`,
 };
+vars.storeOutput = `${vars.appPath}/store.db`;
+vars.logsOutput = `${vars.appPath}/logs`;
+
+export default vars;
