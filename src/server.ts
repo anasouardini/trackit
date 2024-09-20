@@ -72,13 +72,25 @@ process.on("SIGTERM", function onSigterm() {
 //   exec('touch sigterming');
 // });
 
+let serverSocket: null | net.Socket = null;
+
 const actions = {
+  help: () => {
+    // console.log(Object.keys(actions).join(' - '))
+    if (serverSocket) {
+      serverSocket.write(
+        JSON.stringify({ err: false, data: Object.keys(actions).join(" - ") }),
+      );
+    }
+  },
   init: (socket) => {
+    // todo: make this smarter
     model.init(socket);
   },
   k: () => {
     process.exit(0);
   },
+  // list activities
   la: (socket, request) => {
     if (request.args[0] == "all" || request.args[0] == "a") {
       model.getActivities(socket);
@@ -89,6 +101,7 @@ const actions = {
     };
     model.getActivities(socket, args);
   },
+  // list events
   le: (socket, request) => {
     if (request.args[0] == "all" || request.args[0] == "a") {
       model.getEvents(socket);
@@ -99,6 +112,7 @@ const actions = {
     };
     model.getEvents(socket, args);
   },
+  // create activity
   c: (socket, request) => {
     const args = {
       title: request?.args[0] ?? "",
@@ -106,12 +120,14 @@ const actions = {
       icon: request?.args[2] ?? "",
     };
     // todo
-    // model.c(socket, args);
+    model.createActivity(socket, args);
   },
+  // remove activity
   r: (socket, request) => {
     // todo
     // model.r(socket, request.args[0]);
   },
+  // get day duration
   w: async (socket, request) => {
     const activity = request?.args[0] || timerObj.currentActivity || undefined;
 
@@ -142,11 +158,12 @@ const actions = {
         message = `${activity}: ${tools.secToTime(duration)}`;
       }
     } else {
-      message = "no activity\nno activity was specified or currently running";
+      message = "no activity was specified or currently running";
     }
 
     socket.write(JSON.stringify({ err: false, data: message }));
   },
+  // get day duration
   d: async (socket, request) => {
     const resp = await model.getDuration(request.args[0], request.args[1]);
 
@@ -157,6 +174,7 @@ const actions = {
       }),
     );
   },
+  // status of the timer
   v: async (socket, request) => {
     let message = timerObj.running
       ? `${timerObj.currentActivity} - running`
@@ -164,13 +182,6 @@ const actions = {
 
     if (request.args[0] == "n") {
       tools.activityNotify(timerObj.currentActivity, timerObj.running);
-
-      return socket.write(
-        JSON.stringify({
-          err: false,
-          data: "",
-        }),
-      );
     }
 
     socket.write(
@@ -180,6 +191,7 @@ const actions = {
       }),
     );
   },
+  // start/stop toggle
   s: (socket, request) => {
     //TODO: store the date after a stop
     const targetActivity = request.args[0];
@@ -222,7 +234,10 @@ const actions = {
 };
 
 const server = net.createServer((socket) => {
+  serverSocket = socket;
+
   socket.on("data", (data: string) => {
+    console.log("got data");
     const request = JSON.parse(data);
 
     if (!request.action || !actions?.[request.action]) {

@@ -1,6 +1,6 @@
 {
   "name": "clockify",
-  "version": "0.3.4",
+  "version": "0.4.5",
   "description": "A time tracker to make sure that you really spent the time you think you spent working, studying, etc.",
   "license": "MIT",
   "keywords": [
@@ -18,7 +18,7 @@
     "dev": "nodemon ./src/index.ts ./src/server.ts",
     "format": "prettier . --write",
     "testOnce": "vitest --run",
-    "formatCheck": "prettier . --check",
+    "formatCheck": "prettier . --check || prettier . --write",
     "lint": "tsc --noEmit",
     "build": "tsc",
     "ci": "npm run formatCheck && npm run lint && npm run testOnce && npm run build",

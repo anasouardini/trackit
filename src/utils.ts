@@ -70,7 +70,7 @@ const secToTime = (value: string | number) => {
   if (seconds < 10) {
     secondsStr = "0" + seconds;
   }
-  return `${hoursStr}":"${minutesStr}":"${secondsStr}`;
+  return `${hoursStr}:${minutesStr}:${secondsStr}`;
 };
 
 const getDate = (dateStr?: string) => {
@@ -105,9 +105,7 @@ const log = (type: "err" | "warn" | "info", message: string) => {
     fs.mkdirSync(vars.appPath, { recursive: true });
   }
 
-  fs.writeFileSync(vars.logsOutput, `${getDate()} | ${type} | ${message}`, {
-    flag: "wx",
-  });
+  fs.writeFileSync(vars.logsOutput, `${getDate()} | ${type} | ${message}`);
 };
 
 export default { notify, activityNotify, rand, sleep, secToTime, getDate, log };

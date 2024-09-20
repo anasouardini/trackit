@@ -19,16 +19,30 @@ const options = {
 
 const client = new net.Socket();
 
+interface Data {
+  serverChildProcess: any;
+}
+const data: Data = {
+  serverChildProcess: null,
+};
+
 function startServer() {
   const currentDir = path.dirname(__dirname);
   const serverFilePath = path.join(currentDir, "bin", "server.js");
   console.log(`lunching server from ${serverFilePath}`);
-  const serverChildProcess = fork(serverFilePath, [], {
+  data.serverChildProcess = fork(serverFilePath, [], {
     detached: true,
     stdio: "ignore", // no need for shell IO when I have sockets
   });
-  serverChildProcess.disconnect(); // closing IPC channel
-  serverChildProcess.unref();
+  console.log(`server process' ID: ${data.serverChildProcess.pid}`);
+  data.serverChildProcess.disconnect(); // closing IPC channel
+  data.serverChildProcess.unref();
+}
+
+function stopServer() {
+  console.log("stopping server...");
+  data.serverChildProcess.kill();
+  client.end();
 }
 
 function enqueueExit(status: number) {
@@ -72,6 +86,7 @@ function connectToServer() {
       action: process.argv[2],
       args: process.argv.slice(3),
     };
+
     console.log({ data });
     client.write(JSON.stringify(data));
   });

@@ -2,6 +2,7 @@ const sqlite = require("sqlite3").verbose();
 import vars from "./vars";
 import utils from "./utils";
 import fs from "fs";
+import model from "./model";
 
 fs.access(vars.storeOutput, fs.constants.F_OK, (err) => {
   if (err) {
@@ -26,6 +27,7 @@ const db = new sqlite.Database(
     if (err) {
       utils.log("err", "db connection failed");
       console.log(err);
+      return;
     }
   },
 );

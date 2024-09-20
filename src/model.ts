@@ -233,10 +233,15 @@ const createActivity = async (socket, props) => {
 
   // console.log(props)
   let query = `insert into
-                activities(activitID, title, background, icon)
+                activities(title, background, icon, date)
                 values(?, ?, ?, ?);
               `;
-  const params = [utils.rand.uuid(), props.title, props.background, props.icon];
+  const params = [
+    props.title,
+    props.background ?? "",
+    props.icon ?? "",
+    utils.getDate(),
+  ];
 
   const resp = await dbHandler(query, params);
   if (resp.err) {
@@ -244,7 +249,7 @@ const createActivity = async (socket, props) => {
     socket.write(
       JSON.stringify({
         err: true,
-        data: "db err - creating activity",
+        data: `db err - creating activity\n${resp.data}`,
       }),
     );
   }
