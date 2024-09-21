@@ -222,7 +222,7 @@ const actions = {
         duration: request.args[0] ?? "d",
       });
       console.log({ durationResp });
-      message += `${activity.title}: ${durationResp.data}\n`;
+      message += `${activity.title == timerObj.currentActivity ? "> " : ""}${activity.title}: ${durationResp.data}\n`;
     }
 
     socket.write(JSON.stringify({ err: false, data: message }));
