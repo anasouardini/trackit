@@ -47,29 +47,34 @@ const init = async (socket) => {
   socket.write(JSON.stringify({ type: "", data: "database re/initialized" }));
 };
 
-const getActivities = async (socket, props?) => {
-  if (!props.filterProperty || props.selectProperty) {
+interface GetActivitiesProps {
+  socket: any;
+  filterProperty?: string;
+  selectProperty?: string;
+}
+const getActivities = async ({
+  socket,
+  filterProperty,
+  selectProperty,
+}: GetActivitiesProps) => {
+  if (!filterProperty && !selectProperty) {
     const resp = await dbHandler("select * from activities;", []);
     if (resp.err) {
       console.log(resp);
-      socket.write(
-        JSON.stringify({
-          err: true,
-          data: "db err - listing activities",
-        }),
-      );
+      return {
+        err: true,
+        data: "db err - listing activities",
+      };
     }
     if (typeof resp.data == "string") {
       console.log(
         "Err [model.getActivities] -> expected rows/array from db, got a string instead",
       );
-      socket.write(
-        JSON.stringify({
-          err: true,
-          data: "server err - listing activities",
-        }),
-      );
-      return;
+
+      return {
+        err: true,
+        data: "server err - listing activities",
+      };
     }
 
     const onelineEntries = resp.data.map((itemObj) => {
@@ -80,24 +85,25 @@ const getActivities = async (socket, props?) => {
       return onelineItem.join(" | ");
     });
 
-    return socket.write(JSON.stringify({ err: false, data: onelineEntries }));
+    return { err: false, data: onelineEntries };
   }
 
-  let query = `select ${
-    props?.selectProperty ?? "*"
-  } from activities where title=?`;
+  let query = `select ${selectProperty ?? "*"} from activities`;
+
+  const params: string[] = [];
+  if (filterProperty) {
+    query += ` where title=?`;
+    params.push(filterProperty);
+  }
   // console.log(props)
-  const params = [props.filterProperty];
 
   const resp = await dbHandler(query, params);
   if (resp.err) {
     console.log(resp);
-    socket.write(
-      JSON.stringify({
-        err: true,
-        data: "db err - previewing activity",
-      }),
-    );
+    return {
+      err: true,
+      data: "db err - previewing activity",
+    };
   }
 
   let respData = resp.data;
@@ -108,14 +114,7 @@ const getActivities = async (socket, props?) => {
     respData = respData[0];
   }
 
-  // console.log(respData);
-  respData = props?.selectProperty ? Object.values(respData)[0] : respData;
-
-  let onelineItem: any[] = [];
-  Object.values(respData).forEach((val) => {
-    onelineItem.push(val);
-  });
-  socket.write(JSON.stringify({ err: false, data: onelineItem.join(" | ") }));
+  return { err: false, data: respData };
 };
 
 const getEvents = async (socket, props?) => {
@@ -369,16 +368,23 @@ const incrementDuration = async (_, activity, eventID, duration) => {
   // console.log(resp);
 };
 
-const getDuration = async (
+interface GetDurationProps {
+  socket: any;
+  activity: string;
+  duration: "d" | "w" | "m" | "y";
+}
+const getDuration = async ({
+  socket,
   activity,
-  duration,
-): Promise<{ err: boolean; data: string | Record<string, any>[] }> => {
+  duration = "d",
+}: GetDurationProps) => {
   const existActivityResp = await activityExists(activity);
   if (!existActivityResp) {
     return { err: false, data: "no activity" };
   }
 
-  let query = `select sum(duration) as duration from events where activity=?
+  let query = `select sum(duration) as duration
+              from events where activity=?
               and date >= ?;`;
 
   const freshDate = new Date();
@@ -390,13 +396,19 @@ const getDuration = async (
 
   if (duration === "m") {
     targetDuration.day = 1;
+  } else if (duration === "w") {
+    const weekOverflow = targetDuration.day % 7;
+    targetDuration.day -= weekOverflow > 0 ? weekOverflow - 1 : 6;
   } else if (duration === "y") {
     targetDuration.month = 1;
     targetDuration.day = 1;
   }
 
   let targetDurationString = `${targetDuration.year}-${targetDuration.month}-${targetDuration.day}`;
-  const params = [activity, utils.getDate(targetDurationString)];
+  console.log("date to parse: ", targetDurationString);
+  const seconds = utils.getDate(targetDurationString);
+  console.log("seconds: ", seconds);
+  const params = [activity, seconds];
   // console.log(query)
   // console.log(query);
   // console.log(targetDurationString);
@@ -404,17 +416,23 @@ const getDuration = async (
   // console.log(resp.data)
 
   if (resp.err) {
-    return resp;
+    return {
+      err: resp.err,
+      // @ts-ignore
+      data: resp.data[0].duration ?? 0,
+    };
   }
 
   if (!resp.data.length) {
     return { err: false, data: "no activity" };
   }
 
+  // @ts-ignore
+  const durationTime = utils.secToTime(resp.data[0].duration ?? 0);
   return {
     err: false,
     // @ts-ignore
-    data: utils.secToTime(resp.data[0].duration),
+    data: durationTime,
   };
 };
 

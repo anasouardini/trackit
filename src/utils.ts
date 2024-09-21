@@ -18,6 +18,10 @@ const activityNotify = (activity: string, running: boolean, socket?: any) => {
   );
 };
 
+const debug = (message: string) => {
+  notify("debug", message, "white");
+};
+
 const notify = (title, message, color, socket?) => {
   // exec("export DBUS_SESSION_BUS_ADDRESS=$(dbus-launch --exit-with-session | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')",
   //   (err, out) => {
@@ -123,4 +127,13 @@ const log = (type: "err" | "warn" | "info", message: string) => {
   fs.writeFileSync(vars.logsOutput, `${getDate()} | ${type} | ${message}`);
 };
 
-export default { notify, activityNotify, rand, sleep, secToTime, getDate, log };
+export default {
+  notify,
+  activityNotify,
+  rand,
+  sleep,
+  secToTime,
+  getDate,
+  log,
+  debug,
+};
