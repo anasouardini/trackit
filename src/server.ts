@@ -87,7 +87,7 @@ const help = {
     "    d [d, w, m] [activity]",
     "    if no activity provided, running activity will be shown",
   ],
-  da: ["d - get duration of all activities", "    d [d, w, m]"],
+  da: ["da - get duration of all activities", "    d [d, w, m]"],
   v: "v - get status",
   s: "s - toggle timer",
 };
@@ -230,7 +230,36 @@ const actions = {
   },
   // get duration of activity
   d: async (socket, request) => {
-    const activity = request?.args[0] || timerObj.currentActivity || undefined;
+    const resp = await model.getActivities({
+      socket,
+      selectProperty: "title",
+    });
+    if (resp.err) {
+      socket.write(
+        JSON.stringify({
+          err: true,
+          data: "db err - listing activities durations",
+        }),
+      );
+      return;
+    }
+    const activities = resp.data as Record<string, any>[];
+
+    const duration = request?.args[0] || "d";
+    const activity = request?.args[1] || timerObj.currentActivity || undefined;
+    const activityExists = activities.some((activityItem) => {
+      return activityItem.title == activity;
+    });
+
+    if (!activityExists) {
+      socket.write(
+        JSON.stringify({
+          err: true,
+          data: `activity ${activity} does not exist`,
+        }),
+      );
+      return;
+    }
 
     let message = "";
 
@@ -243,12 +272,12 @@ const actions = {
         // console.log('hitting the db', timerObj.durationChache);
         const resp = await model.getDuration({
           socket,
-          activity: request.args[1],
-          duration: request.args[0],
+          activity,
+          duration,
         });
         // console.log(resp.data)
 
-        message = `${activity}: ${tools.secToTime(resp.data)}`;
+        message = `${activity}: ${resp.data}`;
       } else if (
         !request.args[0] ||
         timerObj.currentActivity == request.args[0]
