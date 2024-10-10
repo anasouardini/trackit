@@ -175,8 +175,17 @@ const actions = {
           duration: "w",
         });
         // console.log(resp.data)
+        if (resp.err) {
+          socket.write(
+            JSON.stringify({
+              err: true,
+              data: resp.err,
+            }),
+          );
+          return;
+        }
 
-        message = `${activity}: ${tools.secToTime(resp.data)}`;
+        message = `${activity}: ${tools.secToTime(resp.data.duration)}`;
       } else if (
         !request.args[0] ||
         timerObj.currentActivity == request.args[0]
@@ -197,6 +206,7 @@ const actions = {
     socket.write(JSON.stringify({ err: false, data: message }));
     tools.notify("activity duration", message, "green");
   },
+  // duration of all activities
   da: async (socket, request) => {
     // todo: get activities list
     const resp = await model.getActivities({
@@ -221,8 +231,27 @@ const actions = {
         activity: activity.title,
         duration: request.args[0] ?? "d",
       });
-      console.log({ durationResp });
-      message += `${activity.title == timerObj.currentActivity ? "> " : ""}${activity.title}: ${durationResp.data}\n`;
+      if (durationResp.err) {
+        socket.write(
+          JSON.stringify({
+            err: true,
+            data: durationResp.err,
+          }),
+        );
+        return;
+      }
+      // console.log({ durationResp });
+      const startMs = new Date(durationResp.data.start).getTime();
+      const endMs = new Date(durationResp.data.end).getTime();
+      let timeSpanDays = (endMs - startMs) / (1000 * 60 * 60 * 24);
+      if (timeSpanDays < 1) {
+        timeSpanDays = 1;
+      }
+      const durationHour =
+        tools.timeToSec(durationResp.data.duration) / (60 * 60);
+      const hoursPerDay = (durationHour / timeSpanDays).toFixed(2);
+      // const hoursPerDay = `${durationHour} / ${timeSpanDays}`;
+      message += `${activity.title == timerObj.currentActivity ? "> " : ""}${activity.title}: ${durationResp.data.duration} - ${hoursPerDay}H/D\n`;
     }
 
     socket.write(JSON.stringify({ err: false, data: message }));
@@ -276,8 +305,17 @@ const actions = {
           duration,
         });
         // console.log(resp.data)
+        if (resp.err) {
+          socket.write(
+            JSON.stringify({
+              err: true,
+              data: resp.err,
+            }),
+          );
+          return;
+        }
 
-        message = `${activity}: ${resp.data}`;
+        message = `${activity}: ${resp.data.duration}`;
       } else if (
         !request.args[0] ||
         timerObj.currentActivity == request.args[0]

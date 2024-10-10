@@ -373,14 +373,23 @@ interface GetDurationProps {
   activity: string;
   duration: "d" | "w" | "m" | "y";
 }
-const getDuration = async ({
+interface DurationData {
+  start: string;
+  end: string;
+  duration: string;
+}
+type GetDurationOutput = Promise<
+  { err: boolean; data: DurationData } | { err: true; data: string }
+>;
+async function getDuration({
   socket,
   activity,
   duration = "d",
-}: GetDurationProps) => {
+}: GetDurationProps): GetDurationOutput {
   const existActivityResp = await activityExists(activity);
+
   if (!existActivityResp) {
-    return { err: false, data: "no activity" };
+    return { err: true, data: "no activity" };
   }
 
   let query = `select sum(duration) as duration
@@ -418,23 +427,26 @@ const getDuration = async ({
   if (resp.err) {
     return {
       err: resp.err,
-      // @ts-ignore
-      data: resp.data[0].duration ?? 0,
+      data: resp.data as string,
     };
   }
 
   if (!resp.data.length) {
-    return { err: false, data: "no activity" };
+    return { err: true, data: "no activity" };
   }
 
   // @ts-ignore
   const durationTime = utils.secToTime(resp.data[0].duration ?? 0);
   return {
     err: false,
-    // @ts-ignore
-    data: durationTime,
+    data: {
+      // @ts-ignore
+      duration: durationTime,
+      start: targetDurationString.replaceAll("-", "/"),
+      end: new Date().toISOString().split("T")[0],
+    },
   };
-};
+}
 
 const getDayDuration = async (_, activity) => {
   // was fixing date format in db

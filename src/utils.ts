@@ -92,6 +92,15 @@ const secToTime = (value: string | number) => {
   return `${hoursStr}:${minutesStr}:${secondsStr}`;
 };
 
+const timeToSec = (value: string) => {
+  const chunks = value.split(":");
+  const hours = parseInt(chunks[0], 10);
+  const minutes = parseInt(chunks[1], 10);
+  const seconds = parseInt(chunks[2], 10);
+
+  return hours * 3600 + minutes * 60 + seconds;
+};
+
 const getDate = (dateStr?: string) => {
   let date: Date;
   if (dateStr) {
@@ -133,6 +142,7 @@ export default {
   rand,
   sleep,
   secToTime,
+  timeToSec,
   getDate,
   log,
   debug,
