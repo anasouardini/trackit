@@ -32,11 +32,11 @@ const db = new sqlite.Database(
   },
 );
 
-const dbHandler = (
-  query,
-  param,
-): Promise<{ err: boolean; data: string | Record<string, any>[] }> => {
-  const promise = new Promise(function (resolve) {
+type DBHandlerOutput =
+  | { err: true; data: string }
+  | { err: false; data: Record<string, any>[] };
+const dbHandler = (query, param): Promise<DBHandlerOutput> => {
+  const promise = new Promise<DBHandlerOutput>(function (resolve) {
     db.all(query, param, (err, rows) => {
       if (err) {
         utils.log(
@@ -49,7 +49,8 @@ const dbHandler = (
       }
     });
   });
-  return promise as Promise<{ err: boolean; data: string }>;
+
+  return promise;
 };
 
 export default dbHandler;

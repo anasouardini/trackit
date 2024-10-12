@@ -21,7 +21,7 @@ const timerObj = {
     timerObj.durationChache = resp.data;
 
     const incrementDuration = () => {
-      // interval is passed as seconds
+      // seconds
       const duration = Math.floor((Date.now() - timerObj.startDate) / 1000);
       // console.log(duration);
       // NOTE: there is a tiny gap where the client could get a value older by one interval
@@ -88,6 +88,7 @@ const help = {
     "    if no activity provided, running activity will be shown",
   ],
   da: ["da - get duration of all activities", "    d [d, w, m]"],
+  p: ["p - print stats", "    p [activity]"],
   v: "v - get status",
   s: "s - toggle timer",
 };
@@ -205,6 +206,32 @@ const actions = {
 
     socket.write(JSON.stringify({ err: false, data: message }));
     tools.notify("activity duration", message, "green");
+  },
+  p: async (socket, request) => {
+    const activity = request?.args[0] || timerObj.currentActivity || undefined;
+    if (!activity) {
+      return;
+    }
+
+    const resp = await model.getStats(activity);
+    if (resp.err) {
+      socket.write(JSON.stringify({ err: resp.err }));
+      return;
+    }
+
+    let data = "";
+    Object.entries(resp.data).forEach((month) => {
+      const [monthName, monthData] = month;
+      data += `\n${monthName}: ${tools.secToTime(monthData.duration * 60 * 60)} | ${monthData.hoursPerDay.toFixed(2)} hours per day`;
+      if (monthData.duration > 0) {
+        monthData.days.forEach((day, index) => {
+          data += `\n     [${index + 1}] ${day.hours.toFixed(2)} hours`;
+        });
+      }
+    });
+
+    socket.write(JSON.stringify({ err: false, data }));
+    tools.notify("activities duration", data, "green");
   },
   // duration of all activities
   da: async (socket, request) => {

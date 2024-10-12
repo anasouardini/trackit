@@ -108,6 +108,7 @@ const getActivities = async ({
 
   let respData = resp.data;
   if (respData.length == 0) {
+    // @ts-ignore
     respData = "activity not found";
   } else if (respData.length == 1) {
     // @ts-ignore
@@ -132,7 +133,6 @@ const getEvents = async (socket, props?) => {
       return;
     }
 
-    // @ts-ignore
     const onelineEntries = resp.data.map((itemObj) => {
       let onelineItem: any[] = [];
       Object.values(itemObj).forEach((val) => {
@@ -448,6 +448,44 @@ async function getDuration({
   };
 }
 
+const getStats = async (activity) => {
+  const resp = await dbHandler("select * from events;", []);
+  if (resp.err) {
+    console.log(resp);
+    return resp;
+  }
+
+  const year = new Date(resp.data[0].date).getFullYear();
+  const cal = utils.generateCalendar(year);
+  const monthNames = Object.keys(cal);
+  let previousMonthNumber: number | undefined = undefined;
+  resp.data.forEach((event, index, arr) => {
+    const { date, duration } = event;
+    const durationHours = event.duration / 60 / 60;
+    const eventMonth = new Date(date).getMonth();
+    const eventDay = new Date(date).getDate();
+
+    // console.log(eventMonth, monthNames[eventMonth], cal[monthNames[eventMonth]]);
+    // console.log(eventDay, cal[monthNames[eventMonth]].days[eventDay - 1]);
+    cal[monthNames[eventMonth]].duration += durationHours;
+    cal[monthNames[eventMonth]].days[eventDay - 1].hours += durationHours;
+
+    const isNextMonth = eventMonth !== previousMonthNumber;
+    const isLastEvent = index == arr.length - 1;
+    if (previousMonthNumber !== undefined && (isNextMonth || isLastEvent)) {
+      cal[monthNames[previousMonthNumber]].fullDate =
+        `${year}-${previousMonthNumber + 1}-${eventDay}`;
+      const hoursPerDay =
+        cal[monthNames[previousMonthNumber]].duration /
+        cal[monthNames[previousMonthNumber]].days.length;
+      cal[monthNames[previousMonthNumber]].hoursPerDay = hoursPerDay;
+    }
+    previousMonthNumber = eventMonth;
+  });
+
+  return { err: false, data: cal };
+};
+
 const getDayDuration = async (_, activity) => {
   // was fixing date format in db
   // {
@@ -508,5 +546,6 @@ export default {
   removeActivity,
   getDayDuration,
   getDuration,
+  getStats,
   incrementDuration,
 };

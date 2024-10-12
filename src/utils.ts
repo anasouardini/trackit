@@ -136,6 +136,50 @@ const log = (type: "err" | "warn" | "info", message: string) => {
   fs.writeFileSync(vars.logsOutput, `${getDate()} | ${type} | ${message}`);
 };
 
+function generateCalendar(year) {
+  type MonthName =
+    | "January"
+    | "February"
+    | "March"
+    | "April"
+    | "May"
+    | "June"
+    | "July"
+    | "August"
+    | "September"
+    | "October"
+    | "November"
+    | "December";
+  interface Month {
+    duration: number;
+    hoursPerDay: number;
+    fullDate: string;
+    days: {
+      hours: number;
+    }[];
+  }
+  interface Calendar {
+    [key: string]: Month;
+  }
+  const calendar: Calendar | {} = {};
+
+  for (let month = 0; month < 12; month++) {
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const monthName: MonthName = new Date(year, month).toLocaleString(
+      "default",
+      { month: "long" },
+    ) as MonthName;
+    calendar[monthName] = {
+      duration: 0,
+      hoursPerDay: 0,
+      fullDate: "",
+      days: Array.from({ length: lastDay }, (_, i) => ({ hours: 0 })),
+    };
+  }
+
+  return calendar as Calendar;
+}
+
 export default {
   notify,
   activityNotify,
@@ -146,4 +190,5 @@ export default {
   getDate,
   log,
   debug,
+  generateCalendar,
 };
