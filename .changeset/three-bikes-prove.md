@@ -1,0 +1,5 @@
+---
+"clockify": patch
+---
+
+minor bug

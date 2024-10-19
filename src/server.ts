@@ -220,9 +220,12 @@ const actions = {
     }
 
     let data = "";
+    let notifyMsg = "";
     Object.entries(resp.data).forEach((month) => {
       const [monthName, monthData] = month;
-      data += `\n${monthName}: ${tools.secToTimeStr(monthData.duration * 60 * 60)} | ${monthData.hoursPerDay.toFixed(2)} hours per day`;
+      const monthTitle = `\n${monthName}: ${tools.secToTimeStr(monthData.duration * 60 * 60)} | ${monthData.hoursPerDay.toFixed(2)} hours per day`;
+      data += monthTitle;
+      notifyMsg += monthTitle;
       if (monthData.duration > 0) {
         monthData.days.forEach((day, index) => {
           data += `\n     [${index + 1}] ${day.hours.toFixed(2)} hours`;
@@ -231,7 +234,7 @@ const actions = {
     });
 
     socket.write(JSON.stringify({ err: false, data }));
-    tools.notify("activities duration", data, "green");
+    tools.notify("activities duration", notifyMsg, "green");
   },
   // duration of all activities
   da: async (socket, request) => {

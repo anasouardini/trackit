@@ -484,11 +484,14 @@ const getStats = async (activity) => {
     // calculate total and avg
     const isLastEvent = index == arr.length - 1;
     const isEndOfMonth = cal[eventMonthName].days.length == eventDayNumber;
-    if (isEndOfMonth && isLastEvent) {
+    const isLastEventInDay = "?";
+    if (isEndOfMonth || isLastEvent) {
+      console.log({ isEndOfMonth, isLastEvent });
       cal[eventMonthName].fullDate =
         `${firstEventDate.year}-${eventMonthNumber}`;
       cal[eventMonthName].hoursPerDay =
         cal[eventMonthName].duration / cal[eventMonthName].days.length;
+      console.log({ hpd: cal[eventMonthName].hoursPerDay });
     }
   });
 
