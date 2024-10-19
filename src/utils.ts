@@ -71,7 +71,7 @@ const rand = {
   },
 };
 // seconds to time format
-const secToTime = (value: string | number) => {
+const secToTimeStr = (value: string | number) => {
   var sec_num = parseInt(value.toString(), 10); // don't forget the second param
   const hours = Math.floor(sec_num / 3600);
   const minutes = Math.floor((sec_num - hours * 3600) / 60);
@@ -101,7 +101,7 @@ const timeToSec = (value: string) => {
   return hours * 3600 + minutes * 60 + seconds;
 };
 
-const getDate = (dateStr?: string) => {
+const getDateObj = (dateStr?: string) => {
   let date: Date;
   if (dateStr) {
     date = new Date(dateStr);
@@ -118,6 +118,12 @@ const getDate = (dateStr?: string) => {
     s: date.getSeconds(),
   };
 
+  return dateTimeProps;
+};
+
+const getDateStr = (dateStr?: string) => {
+  const dateTimeProps = getDateObj(dateStr);
+
   Object.keys(dateTimeProps).forEach((propKey) => {
     let value = dateTimeProps[propKey];
     if (parseInt(value) < 10) {
@@ -133,10 +139,10 @@ const log = (type: "err" | "warn" | "info", message: string) => {
     fs.mkdirSync(vars.appPath, { recursive: true });
   }
 
-  fs.writeFileSync(vars.logsOutput, `${getDate()} | ${type} | ${message}`);
+  fs.writeFileSync(vars.logsOutput, `${getDateStr()} | ${type} | ${message}`);
 };
 
-function generateCalendar(year) {
+function generateCalendar(start: { year: number; month: number }) {
   type MonthName =
     | "January"
     | "February"
@@ -163,21 +169,40 @@ function generateCalendar(year) {
   }
   const calendar: Calendar | {} = {};
 
-  for (let month = 0; month < 12; month++) {
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    const monthName: MonthName = new Date(year, month).toLocaleString(
-      "default",
-      { month: "long" },
-    ) as MonthName;
+  for (let monthNumber = start.month; monthNumber <= 12; monthNumber++) {
+    let lastDay = new Date(start.year, monthNumber, 0).getDate();
+    const monthName: MonthName = new Date(
+      start.year,
+      monthNumber - 1,
+    ).toLocaleString("default", { month: "long" }) as MonthName;
+
+    const currentMonthNumber = new Date().getMonth() + 1;
+    if (currentMonthNumber == monthNumber) {
+      lastDay = new Date().getDate();
+    }
+
     calendar[monthName] = {
       duration: 0,
       hoursPerDay: 0,
       fullDate: "",
       days: Array.from({ length: lastDay }, (_, i) => ({ hours: 0 })),
     };
+
+    if (currentMonthNumber == monthNumber) {
+      break;
+    }
   }
 
   return calendar as Calendar;
+}
+
+function getMonthName(monthNumber: number) {
+  // Date takes index
+  const name = new Date(2000, monthNumber - 1).toLocaleString("default", {
+    month: "long",
+  });
+
+  return name;
 }
 
 export default {
@@ -185,10 +210,12 @@ export default {
   activityNotify,
   rand,
   sleep,
-  secToTime,
+  secToTimeStr,
   timeToSec,
-  getDate,
+  getDateStr,
+  getDateObj,
   log,
   debug,
   generateCalendar,
+  getMonthName,
 };

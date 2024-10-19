@@ -239,7 +239,7 @@ const createActivity = async (socket, props) => {
     props.title,
     props.background ?? "",
     props.icon ?? "",
-    utils.getDate(),
+    utils.getDateStr(),
   ];
 
   const resp = await dbHandler(query, params);
@@ -341,7 +341,7 @@ const incrementDuration = async (_, activity, eventID, duration) => {
     let query = `insert into events(id, activity, date, duration)
                 values(?, ?, ?, ?)`;
     // js dates are ughhh
-    const params = [eventID, activity, utils.getDate(), duration];
+    const params = [eventID, activity, utils.getDateStr(), duration];
     const resp = await dbHandler(query, params);
 
     if (resp.err) {
@@ -415,7 +415,7 @@ async function getDuration({
 
   let targetDurationString = `${targetDuration.year}-${targetDuration.month}-${targetDuration.day}`;
   console.log("date to parse: ", targetDurationString);
-  const seconds = utils.getDate(targetDurationString);
+  const seconds = utils.getDateStr(targetDurationString);
   console.log("seconds: ", seconds);
   const params = [activity, seconds];
   // console.log(query)
@@ -436,7 +436,7 @@ async function getDuration({
   }
 
   // @ts-ignore
-  const durationTime = utils.secToTime(resp.data[0].duration ?? 0);
+  const durationTime = utils.secToTimeStr(resp.data[0].duration ?? 0);
   return {
     err: false,
     data: {
@@ -455,32 +455,41 @@ const getStats = async (activity) => {
     return resp;
   }
 
-  const year = new Date(resp.data[0].date).getFullYear();
-  const cal = utils.generateCalendar(year);
-  const monthNames = Object.keys(cal);
-  let previousMonthNumber: number | undefined = undefined;
+  const firstEventDate = utils.getDateObj(resp.data[0].date);
+  const cal = utils.generateCalendar({
+    year: firstEventDate.year,
+    month: firstEventDate.month,
+  });
+  // console.log({ cal })
   resp.data.forEach((event, index, arr) => {
-    const { date, duration } = event;
     const durationHours = event.duration / 60 / 60;
-    const eventMonth = new Date(date).getMonth();
-    const eventDay = new Date(date).getDate();
+    const eventMonthNumber = new Date(event.date).getMonth() + 1;
+    const eventDayNumber = new Date(event.date).getDate();
+    const eventMonthName = utils.getMonthName(eventMonthNumber);
+    // console.log(eventMonthNumber, eventDayNumber, eventMonthName);
 
-    // console.log(eventMonth, monthNames[eventMonth], cal[monthNames[eventMonth]]);
-    // console.log(eventDay, cal[monthNames[eventMonth]].days[eventDay - 1]);
-    cal[monthNames[eventMonth]].duration += durationHours;
-    cal[monthNames[eventMonth]].days[eventDay - 1].hours += durationHours;
+    // console.log({
+    //   monthNumber: eventMonthNumber,
+    //   monthName: eventMonthName,
+    //   availableMonths: Object.keys(cal),
+    //   dayNumber: eventDayNumber,
+    //   dayInx: eventDayNumber - 1,
+    //   daysCount: cal[eventMonthName].days.length
+    // })
 
-    const isNextMonth = eventMonth !== previousMonthNumber;
+    // increment durations
+    cal[eventMonthName].duration += durationHours;
+    cal[eventMonthName].days[eventDayNumber - 1].hours += durationHours;
+
+    // calculate total and avg
     const isLastEvent = index == arr.length - 1;
-    if (previousMonthNumber !== undefined && (isNextMonth || isLastEvent)) {
-      cal[monthNames[previousMonthNumber]].fullDate =
-        `${year}-${previousMonthNumber + 1}-${eventDay}`;
-      const hoursPerDay =
-        cal[monthNames[previousMonthNumber]].duration /
-        cal[monthNames[previousMonthNumber]].days.length;
-      cal[monthNames[previousMonthNumber]].hoursPerDay = hoursPerDay;
+    const isEndOfMonth = cal[eventMonthName].days.length == eventDayNumber;
+    if (isEndOfMonth && isLastEvent) {
+      cal[eventMonthName].fullDate =
+        `${firstEventDate.year}-${eventMonthNumber}`;
+      cal[eventMonthName].hoursPerDay =
+        cal[eventMonthName].duration / cal[eventMonthName].days.length;
     }
-    previousMonthNumber = eventMonth;
   });
 
   return { err: false, data: cal };
@@ -521,7 +530,7 @@ const getDayDuration = async (_, activity) => {
   //   const date = d.getDate();
   //   return `${year}-${month}-${date + 1} 00:00:00`;
   // })(new Date());
-  const params = [activity, utils.getDate(today)];
+  const params = [activity, utils.getDateStr(today)];
   // console.log(query)
   // console.log(params)
   const resp = await dbHandler(query, params);

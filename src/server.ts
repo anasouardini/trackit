@@ -186,7 +186,7 @@ const actions = {
           return;
         }
 
-        message = `${activity}: ${tools.secToTime(resp.data.duration)}`;
+        message = `${activity}: ${tools.secToTimeStr(resp.data.duration)}`;
       } else if (
         !request.args[0] ||
         timerObj.currentActivity == request.args[0]
@@ -198,7 +198,7 @@ const actions = {
         const duration = unstoredDuration + timerObj.durationChache;
         // console.log(timerObj.durationChache);
         // console.log(duration);
-        message = `${activity}: ${tools.secToTime(duration)}`;
+        message = `${activity}: ${tools.secToTimeStr(duration)}`;
       }
     } else {
       message = "no activity was specified or currently running";
@@ -222,7 +222,7 @@ const actions = {
     let data = "";
     Object.entries(resp.data).forEach((month) => {
       const [monthName, monthData] = month;
-      data += `\n${monthName}: ${tools.secToTime(monthData.duration * 60 * 60)} | ${monthData.hoursPerDay.toFixed(2)} hours per day`;
+      data += `\n${monthName}: ${tools.secToTimeStr(monthData.duration * 60 * 60)} | ${monthData.hoursPerDay.toFixed(2)} hours per day`;
       if (monthData.duration > 0) {
         monthData.days.forEach((day, index) => {
           data += `\n     [${index + 1}] ${day.hours.toFixed(2)} hours`;
@@ -354,7 +354,7 @@ const actions = {
         const duration = unstoredDuration + timerObj.durationChache;
         // console.log(timerObj.durationChache);
         // console.log(duration);
-        message = `${activity}: ${tools.secToTime(duration)}`;
+        message = `${activity}: ${tools.secToTimeStr(duration)}`;
       }
     } else {
       actions.da(socket, request);
