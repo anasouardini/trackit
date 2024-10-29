@@ -449,7 +449,9 @@ async function getDuration({
 }
 
 const getStats = async (activity) => {
-  const resp = await dbHandler("select * from events;", []);
+  const resp = await dbHandler("select * from events where activity=?;", [
+    activity,
+  ]);
   if (resp.err) {
     console.log(resp);
     return resp;
