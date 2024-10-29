@@ -80,7 +80,7 @@ const help = {
   k: "k - kill server",
   la: "la - list activities",
   le: "le - list events",
-  ca: "ca - create activity",
+  ca: ["ca - create activity", "    ca [title] [description]"],
   // ra: "ra - remove activity"
   d: [
     "d - get duration of an activity",
@@ -143,7 +143,7 @@ const actions = {
     model.getEvents(socket, args);
   },
   // create activity
-  c: (socket, request) => {
+  ca: (socket, request) => {
     const args = {
       title: request?.args[0] ?? "",
       background: request?.args[1] ?? "",
