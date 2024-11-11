@@ -113,9 +113,9 @@ const getDateObj = (dateStr?: string) => {
     year: date.getFullYear(),
     month: date.getMonth() + 1,
     day: date.getDate(),
-    h: date.getHours(),
-    m: date.getMinutes(),
-    s: date.getSeconds(),
+    h: date.getUTCHours(),
+    m: date.getUTCMinutes(),
+    s: date.getUTCSeconds(),
   };
 
   return dateTimeProps;
