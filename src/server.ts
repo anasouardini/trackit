@@ -270,7 +270,7 @@ const actions = {
         );
         return;
       }
-      // console.log({ durationResp });
+      console.log({ durationResp });
       const startMs = new Date(durationResp.data.start).getTime();
       const endMs = new Date(durationResp.data.end).getTime();
       let timeSpanDays = (endMs - startMs) / (1000 * 60 * 60 * 24);

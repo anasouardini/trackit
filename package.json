@@ -1,6 +1,6 @@
 {
   "name": "clockify",
-  "version": "0.11.10",
+  "version": "0.11.11",
   "description": "A time tracker to make sure that you really spent the time you think you spent working, studying, etc.",
   "license": "MIT",
   "keywords": [

@@ -413,7 +413,8 @@ async function getDuration({
     targetDuration.day = 1;
   }
 
-  let targetDurationString = `${targetDuration.year}-${targetDuration.month}-${targetDuration.day}`;
+  //! don't touch this; JS sucks.
+  let targetDurationString = `${targetDuration.year}-${targetDuration.month}-0${targetDuration.day}`;
   console.log("date to parse: ", targetDurationString);
   const dateTimeStr = utils.getDateStr(targetDurationString);
   console.log("dateTime: ", dateTimeStr);
