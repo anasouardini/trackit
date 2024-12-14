@@ -1,6 +1,7 @@
 import utils from "./utils";
 import dbHandler from "./db";
 import { Socket } from "dgram";
+import {} from "date-fns";
 
 // SQLITE IS STUPIIID
 const queries = {
@@ -414,7 +415,8 @@ async function getDuration({
   }
 
   //! don't touch this; JS sucks.
-  let targetDurationString = `${targetDuration.year}-${targetDuration.month}-0${targetDuration.day}`;
+  let targetDurationString = `${targetDuration.year}-${targetDuration.month}`;
+  targetDurationString += `-${String(targetDuration.day).length === 1 ? `0${targetDuration.day}` : targetDuration.day}`;
   console.log("date to parse: ", targetDurationString);
   const dateTimeStr = utils.getDateStr(targetDurationString);
   console.log("dateTime: ", dateTimeStr);
