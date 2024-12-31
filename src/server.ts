@@ -219,10 +219,20 @@ const actions = {
       return;
     }
 
+    let monthDurationCounter = 0;
+    let periodString = "";
     let data = "";
     let notifyMsg = "";
-    Object.entries(resp.data).forEach((month) => {
+    Object.entries(resp.data).forEach((month, idx, list) => {
       const [monthName, monthData] = month;
+
+      if (idx == 0) {
+        periodString += `from ${monthName}`;
+      } else if (idx == list.length - 1) {
+        periodString += ` to ${monthName}`;
+      }
+
+      monthDurationCounter += monthData.duration;
       const monthTitle = `\n${monthName}: ${tools.secToTimeStr(monthData.duration * 60 * 60)} | ${monthData.hoursPerDay.toFixed(2)} hours per day`;
       data += monthTitle;
       notifyMsg += monthTitle;
@@ -232,6 +242,10 @@ const actions = {
         });
       }
     });
+
+    // adding total hours
+    // data += `\n\nTotal Duration: ${tools.secToTimeStr(monthDurationCounter * 60 * 60)} (${periodString})`;
+    data += `\n\nTotal Duration: ${tools.secToTimeStr(monthDurationCounter * 60 * 60)}`;
 
     socket.write(JSON.stringify({ err: false, data }));
     tools.notify("activities duration", notifyMsg, "green");
