@@ -142,7 +142,17 @@ const log = (type: "err" | "warn" | "info", message: string) => {
   fs.writeFileSync(vars.logsOutput, `${getDateStr()} | ${type} | ${message}`);
 };
 
-function generateCalendar(start: { year: number; month: number }) {
+interface GenerateCalendarProps {
+  start: {
+    year: number;
+    month: number;
+  };
+  end: {
+    year: number;
+    month: number;
+  };
+}
+function generateCalendar({ start, end }: GenerateCalendarProps) {
   type MonthName =
     | "January"
     | "February"
@@ -164,32 +174,51 @@ function generateCalendar(start: { year: number; month: number }) {
       hours: number;
     }[];
   }
-  interface Calendar {
-    [key: string]: Month;
-  }
-  const calendar: Calendar | {} = {};
+  type Calendar = Record<number, Record<MonthName, Month>>;
+  const calendar: Calendar = {};
 
-  for (let monthNumber = start.month; monthNumber <= 12; monthNumber++) {
-    let lastDay = new Date(start.year, monthNumber, 0).getDate();
-    const monthName: MonthName = new Date(
-      start.year,
-      monthNumber - 1,
-    ).toLocaleString("default", { month: "long" }) as MonthName;
-
-    const currentMonthNumber = new Date().getMonth() + 1;
-    if (currentMonthNumber == monthNumber) {
-      lastDay = new Date().getDate();
-    }
-
-    calendar[monthName] = {
-      duration: 0,
-      hoursPerDay: 0,
-      fullDate: "",
-      days: Array.from({ length: lastDay }, (_, i) => ({ hours: 0 })),
-    };
-
-    if (currentMonthNumber == monthNumber) {
+  let yearCounter = start.year;
+  let bellowLastYear = Number(yearCounter) <= Number(end.year);
+  for (; ; yearCounter++) {
+    bellowLastYear = Number(yearCounter) <= Number(end.year);
+    if (!bellowLastYear) {
       break;
+    }
+    // @ts-ignore
+    calendar[yearCounter] = {};
+    console.log({
+      yearCounter,
+      end: end.year,
+      condition: Number(yearCounter) <= Number(end.year),
+      condition2: bellowLastYear,
+      typeofyearcounter: typeof yearCounter,
+      typeofyearend: typeof end.year,
+    });
+    let monthCounter = start.year == yearCounter ? start.month : 1;
+    const lastMonth = bellowLastYear ? 12 : end.month;
+    for (; monthCounter <= lastMonth; monthCounter++) {
+      console.log({ monthCounter, end: end.month });
+      let lastDay = new Date(start.year, monthCounter, 0).getDate();
+      const monthName: MonthName = new Date(
+        start.year,
+        monthCounter - 1,
+      ).toLocaleString("default", { month: "long" }) as MonthName;
+
+      const currentMonthNumber = new Date().getMonth() + 1;
+      if (currentMonthNumber == monthCounter) {
+        lastDay = new Date().getDate();
+      }
+
+      calendar[yearCounter][monthName] = {
+        duration: 0,
+        hoursPerDay: 0,
+        fullDate: "",
+        days: Array.from({ length: lastDay }, (_, i) => ({ hours: 0 })),
+      };
+
+      if (currentMonthNumber == monthCounter) {
+        break;
+      }
     }
   }
 

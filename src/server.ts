@@ -207,6 +207,7 @@ const actions = {
     socket.write(JSON.stringify({ err: false, data: message }));
     tools.notify("activity duration", message, "green");
   },
+  // print calendar
   p: async (socket, request) => {
     const activity = request?.args[0] || timerObj.currentActivity || undefined;
     if (!activity) {
@@ -223,24 +224,27 @@ const actions = {
     let periodString = "";
     let data = "";
     let notifyMsg = "";
-    Object.entries(resp.data).forEach((month, idx, list) => {
-      const [monthName, monthData] = month;
+    Object.entries(resp.data).forEach((year, idx, list) => {
+      const [yearNumber, monthObj] = year;
+      Object.entries(monthObj).forEach((month, idx, list) => {
+        const [monthName, monthData] = month;
 
-      if (idx == 0) {
-        periodString += `from ${monthName}`;
-      } else if (idx == list.length - 1) {
-        periodString += ` to ${monthName}`;
-      }
+        if (idx == 0) {
+          periodString += `from ${monthName}`;
+        } else if (idx == list.length - 1) {
+          periodString += ` to ${monthName}`;
+        }
 
-      monthDurationCounter += monthData.duration;
-      const monthTitle = `\n${monthName}: ${tools.secToTimeStr(monthData.duration * 60 * 60)} | ${monthData.hoursPerDay.toFixed(2)} hours per day`;
-      data += monthTitle;
-      notifyMsg += monthTitle;
-      if (monthData.duration > 0) {
-        monthData.days.forEach((day, index) => {
-          data += `\n     [${index + 1}] ${day.hours.toFixed(2)} hours`;
-        });
-      }
+        monthDurationCounter += monthData.duration;
+        const monthTitle = `\n${monthName}: ${tools.secToTimeStr(monthData.duration * 60 * 60)} | ${monthData.hoursPerDay.toFixed(2)} hours per day`;
+        data += monthTitle;
+        notifyMsg += monthTitle;
+        if (monthData.duration > 0) {
+          monthData.days.forEach((day, index) => {
+            data += `\n     [${index + 1}] ${day.hours.toFixed(2)} hours`;
+          });
+        }
+      });
     });
 
     // adding total hours
@@ -252,7 +256,6 @@ const actions = {
   },
   // duration of all activities
   da: async (socket, request) => {
-    // todo: get activities list
     const resp = await model.getActivities({
       socket,
       selectProperty: "title",

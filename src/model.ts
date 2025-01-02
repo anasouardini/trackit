@@ -462,16 +462,27 @@ const getStats = async (activity) => {
   }
 
   const firstEventDate = utils.getDateObj(resp.data[0].date);
+  const currentDate = new Date();
   const cal = utils.generateCalendar({
-    year: firstEventDate.year,
-    month: firstEventDate.month,
+    start: {
+      year: firstEventDate.year,
+      month: firstEventDate.month,
+    },
+    end: {
+      year: currentDate.getFullYear(),
+      month: currentDate.getMonth() + 1,
+    },
   });
-  // console.log({ cal })
+  console.log({ cal });
   resp.data.forEach((event, index, arr) => {
     const durationHours = event.duration / 60 / 60;
+    const eventYearNumber = new Date(event.date).getFullYear();
     const eventMonthNumber = new Date(event.date).getMonth() + 1;
     const eventDayNumber = new Date(event.date).getDate();
     const eventMonthName = utils.getMonthName(eventMonthNumber);
+
+    console.log(eventYearNumber, eventMonthName);
+    const currentMonth = cal[eventYearNumber][eventMonthName];
     // console.log(eventMonthNumber, eventDayNumber, eventMonthName);
 
     // console.log({
@@ -484,20 +495,18 @@ const getStats = async (activity) => {
     // })
 
     // increment durations
-    cal[eventMonthName].duration += durationHours;
-    cal[eventMonthName].days[eventDayNumber - 1].hours += durationHours;
+    currentMonth.duration += durationHours;
+    currentMonth.days[eventDayNumber - 1].hours += durationHours;
 
     // calculate total and avg
     const isLastEvent = index == arr.length - 1;
-    const isEndOfMonth = cal[eventMonthName].days.length == eventDayNumber;
-    const isLastEventInDay = "?";
+    const isEndOfMonth = currentMonth.days.length == eventDayNumber;
     if (isEndOfMonth || isLastEvent) {
-      console.log({ isEndOfMonth, isLastEvent });
-      cal[eventMonthName].fullDate =
-        `${firstEventDate.year}-${eventMonthNumber}`;
-      cal[eventMonthName].hoursPerDay =
-        cal[eventMonthName].duration / cal[eventMonthName].days.length;
-      console.log({ hpd: cal[eventMonthName].hoursPerDay });
+      // console.log({ isEndOfMonth, isLastEvent });
+      currentMonth.fullDate = `${firstEventDate.year}-${eventMonthNumber}`;
+      currentMonth.hoursPerDay =
+        currentMonth.duration / currentMonth.days.length;
+      // console.log({ hpd: cal[eventMonthName].hoursPerDay });
     }
   });
 
