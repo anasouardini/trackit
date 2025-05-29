@@ -1,4 +1,4 @@
-import tools from "./utils";
+import utils from "./utils";
 import model from "./model";
 import net from "net";
 
@@ -14,7 +14,7 @@ const timerObj = {
     if (!timerObj.currentActivity) {
       return;
     }
-    timerObj.eventID = tools.rand.uuid();
+    timerObj.eventID = utils.rand.uuid();
     timerObj.running = true;
     timerObj.startDate = Date.now();
     const resp = await model.getDayDuration(socket, timerObj.currentActivity);
@@ -186,7 +186,7 @@ const actions = {
           return;
         }
 
-        message = `${activity}: ${tools.secToTimeStr(resp.data.duration)}`;
+        message = `${activity}: ${utils.secToTimeStr(resp.data.duration)}`;
       } else if (
         !request.args[0] ||
         timerObj.currentActivity == request.args[0]
@@ -198,14 +198,14 @@ const actions = {
         const duration = unstoredDuration + timerObj.durationChache;
         // console.log(timerObj.durationChache);
         // console.log(duration);
-        message = `${activity}: ${tools.secToTimeStr(duration)}`;
+        message = `${activity}: ${utils.secToTimeStr(duration)}`;
       }
     } else {
       message = "no activity was specified or currently running";
     }
 
     socket.write(JSON.stringify({ err: false, data: message }));
-    tools.notify("activity duration", message, "green");
+    utils.notify("activity duration", message, "green");
   },
   // print calendar
   p: async (socket, request) => {
@@ -236,7 +236,7 @@ const actions = {
         }
 
         monthDurationCounter += monthData.duration;
-        const monthTitle = `\n${monthName}: ${tools.secToTimeStr(monthData.duration * 60 * 60)} | ${monthData.hoursPerDay.toFixed(2)} hours per day`;
+        const monthTitle = `\n${monthName}: ${utils.secToTimeStr(monthData.duration * 60 * 60)} | ${monthData.hoursPerDay.toFixed(2)} hours per day`;
         data += monthTitle;
         notifyMsg += monthTitle;
         if (monthData.duration > 0) {
@@ -249,10 +249,10 @@ const actions = {
 
     // adding total hours
     // data += `\n\nTotal Duration: ${tools.secToTimeStr(monthDurationCounter * 60 * 60)} (${periodString})`;
-    data += `\n\nTotal Duration: ${tools.secToTimeStr(monthDurationCounter * 60 * 60)}`;
+    data += `\n\nTotal Duration: ${utils.secToTimeStr(monthDurationCounter * 60 * 60)}`;
 
     socket.write(JSON.stringify({ err: false, data }));
-    tools.notify("activities duration", notifyMsg, "green");
+    utils.notify("activities duration", notifyMsg, "green");
   },
   // duration of all activities
   da: async (socket, request) => {
@@ -295,14 +295,14 @@ const actions = {
         timeSpanDays = 1;
       }
       const durationHour =
-        tools.timeToSec(durationResp.data.duration) / (60 * 60);
+        utils.timeToSec(durationResp.data.duration) / (60 * 60);
       const hoursPerDay = (durationHour / timeSpanDays).toFixed(2);
       // const hoursPerDay = `${durationHour} / ${timeSpanDays}`;
       message += `${activity.title == timerObj.currentActivity ? "> " : ""}${activity.title}: ${durationResp.data.duration} - ${hoursPerDay}H/D\n`;
     }
 
     socket.write(JSON.stringify({ err: false, data: message }));
-    tools.notify("activities duration", message, "green");
+    utils.notify("activities duration", message, "green");
   },
   // get duration of activity
   d: async (socket, request) => {
@@ -374,7 +374,7 @@ const actions = {
         const duration = unstoredDuration + timerObj.durationChache;
         // console.log(timerObj.durationChache);
         // console.log(duration);
-        message = `${activity}: ${tools.secToTimeStr(duration)}`;
+        message = `${activity}: ${utils.secToTimeStr(duration)}`;
       }
     } else {
       actions.da(socket, request);
@@ -382,7 +382,7 @@ const actions = {
     }
 
     socket.write(JSON.stringify({ err: false, data: message }));
-    tools.notify("activity duration", message, "green");
+    utils.notify("activity duration", message, "green");
   },
   // status of the timer
   v: async (socket, request) => {
@@ -391,7 +391,7 @@ const actions = {
       : "stopped";
 
     if (request.args[0] == "n") {
-      tools.activityNotify(timerObj.currentActivity, timerObj.running);
+      utils.activityNotify(timerObj.currentActivity, timerObj.running);
     }
 
     socket.write(
@@ -432,7 +432,7 @@ const actions = {
       message += `activity ${targetActivity} has started`;
     }
 
-    tools.activityNotify(targetActivity, timerObj.running);
+    utils.activityNotify(targetActivity, timerObj.running);
 
     socket.write(
       JSON.stringify({
@@ -465,7 +465,7 @@ const server = net.createServer((socket) => {
 
 server.listen(port, () => {
   console.log("server is running at port " + port);
-  tools.notify("initial msg", "server started", "green");
+  utils.notify("initial msg", "server started", "green");
   // server is running
   // console.log('server is running at port ' + port);
 });

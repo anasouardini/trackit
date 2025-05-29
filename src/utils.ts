@@ -23,6 +23,30 @@ const debug = (message: string) => {
 };
 
 const notify = (title, message, color, socket?) => {
+  exec(
+    `bash $HOME/home/scripts/notify -t "${title}" -m "<span foreground='${color}'><b>${message}</b></span>" -d 5`,
+    {
+      env: {
+        ...process.env, // Keep existing environment variables
+        DISPLAY: process.env.DISPLAY || ":0", // Ensure DISPLAY is set
+      },
+    },
+    (err, out) => {
+      // console.log("running notify (zenity) command", out, err);
+      if (err) {
+        message += "\nerro notifying";
+        log("err", `notification failed. message: ${message}`);
+        socket?.write(
+          JSON.stringify({
+            err: true,
+            data: `notification failed. message: ${message}`,
+          }),
+        );
+      }
+    },
+  );
+  return;
+
   // exec("export DBUS_SESSION_BUS_ADDRESS=$(dbus-launch --exit-with-session | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')",
   //   (err, out) => {
   //     if (err) {
@@ -34,7 +58,8 @@ const notify = (title, message, color, socket?) => {
   exec(
     // `notify-send -t 3000 '<p style="background:${color}">${message}<p>'`,
     // `notify-send -t 3000 "<span color='#57dafd' font='26px'><i><b>$phrase</b></i></span>" >/dev/null 2>&1`,
-    `dbus-update-activation-environment XDG_SESSION_TYPE; export $(dbus-launch); notify-send -t 4000 "${
+    // sometimes the notifications do not show up wihtout this: "dbus-update-activation-environment XDG_SESSION_TYPE; export $(dbus-launch); "
+    `notify-send -t 4000 "${
       title ? title : "Activities"
     }" "<span color='${color}' font='19px'><b>${message}</b></span>"`,
     {
