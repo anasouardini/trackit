@@ -24,6 +24,30 @@ const debug = (message: string) => {
 
 const notify = (title, message, color, socket?) => {
   exec(
+    `notify-send "${title}" "${message}" -t 5`,
+    {
+      env: {
+        ...process.env, // Keep existing environment variables
+        DISPLAY: process.env.DISPLAY || ":0", // Ensure DISPLAY is set
+      },
+    },
+    (err, out) => {
+      // console.log("running notify (zenity) command", out, err);
+      if (err) {
+        message += "\nerro notifying";
+        log("err", `notification failed. message: ${message}`);
+        socket?.write(
+          JSON.stringify({
+            err: true,
+            data: `notification failed. message: ${message}`,
+          }),
+        );
+      }
+    },
+  );
+  return;
+
+  exec(
     `bash $HOME/home/scripts/notify -t "${title}" -m "<span foreground='${color}'><b>${message}</b></span>" -d 5`,
     {
       env: {
