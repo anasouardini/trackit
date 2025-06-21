@@ -24,7 +24,7 @@ const debug = (message: string) => {
 
 const notify = (title, message, color, socket?) => {
   exec(
-    `notify-send "${title}" "${message}" -t 5`,
+    `notify-send "${title}" "${message}" -t 5000`,
     {
       env: {
         ...process.env, // Keep existing environment variables
