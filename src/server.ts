@@ -241,7 +241,7 @@ const actions = {
         notifyMsg += monthTitle;
         if (monthData.duration > 0) {
           monthData.days.forEach((day, index) => {
-            data += `\n     [${index + 1}] ${day.hours.toFixed(2)} hours`;
+            data += `\n     [${index + 1}] ${utils.secToTimeStr(day.seconds)}`;
           });
         }
       });

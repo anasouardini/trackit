@@ -221,6 +221,7 @@ function generateCalendar({ start, end }: GenerateCalendarProps) {
     fullDate: string;
     days: {
       hours: number;
+      seconds: number;
     }[];
   }
   type Calendar = Record<number, Record<MonthName, Month>>;
@@ -262,7 +263,10 @@ function generateCalendar({ start, end }: GenerateCalendarProps) {
         duration: 0,
         hoursPerDay: 0,
         fullDate: "",
-        days: Array.from({ length: lastDay }, (_, i) => ({ hours: 0 })),
+        days: Array.from({ length: lastDay }, (_, i) => ({
+          hours: 0,
+          seconds: 0,
+        })),
       };
 
       if (currentMonthNumber == monthCounter) {

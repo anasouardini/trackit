@@ -475,7 +475,8 @@ const getStats = async (activity) => {
   });
   console.log({ cal });
   resp.data.forEach((event, index, arr) => {
-    const durationHours = event.duration / 60 / 60;
+    const durationSeconds = event.duration;
+    const durationHours = durationSeconds / 60 / 60;
     const eventYearNumber = new Date(event.date).getFullYear();
     const eventMonthNumber = new Date(event.date).getMonth() + 1;
     const eventDayNumber = new Date(event.date).getDate();
@@ -497,6 +498,7 @@ const getStats = async (activity) => {
     // increment durations
     currentMonth.duration += durationHours;
     currentMonth.days[eventDayNumber - 1].hours += durationHours;
+    currentMonth.days[eventDayNumber - 1].seconds += durationSeconds;
 
     // calculate total and avg
     const isLastEvent = index == arr.length - 1;
